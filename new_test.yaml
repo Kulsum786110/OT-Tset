@@ -3,15 +3,20 @@ name: deploy-helm-chart_$(Date:yyyyMMdd)$(Rev:r)
 trigger: none
 
 variables:
-- group: ExperienceCloudSecrets   # Import your secure variable group
+- group: ExperienceCloudSecrets  
+- name: helmChartVersion
+  value: '24.4.0'
+- name: helmChartFile
+  value: 'opentext-experience-cloud-$(helmChartVersion).tgz'
+- name: helmValuesFile
+  value: 'values.yaml'
+- name: releaseName
+  value: 'experience-cloud'
+- name: namespace
+  value: 'experience-cloud-ns'
+- name: kubernetesServiceConnection
+  value: 'your-k8s-service-connection'
 
-variables:
-  helmChartVersion: '24.4.0'
-  helmChartFile: 'opentext-experience-cloud-$(helmChartVersion).tgz'
-  helmValuesFile: 'experience_values.yaml'
-  releaseName: 'experience-deployment'
-  namespace: 'dev-exstream'
-  kubernetesServiceConnection: 'ecm-dev-k8s-cluster'
 
 stages:
 - stage: deploy_chart
