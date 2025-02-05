@@ -1,0 +1,49 @@
+name: deploy-helm-chart_$(Date:yyyyMMdd)$(Rev:r)
+
+trigger: none
+
+variables:
+- group: ExperienceCloudSecrets   # Import your secure variable group
+
+variables:
+  helmChartVersion: '24.4.0'
+  helmChartFile: 'opentext-experience-cloud-$(helmChartVersion).tgz'
+  helmValuesFile: 'experience_values.yaml'
+  releaseName: 'experience-deployment'
+  namespace: 'dev-exstream'
+  kubernetesServiceConnection: 'ecm-dev-k8s-cluster'
+
+stages:
+- stage: deploy_chart
+  displayName: 'Deploy Helm Chart'
+  jobs:
+    - job: deploy_helm_chart
+      displayName: 'Deploy Helm Chart'
+      pool:
+        name: 'YourAgentPoolName'
+      steps:
+        - checkout: self
+          displayName: 'Checkout Repository'
+
+        - task: Bash@3
+          displayName: 'Lint Helm Chart'
+          inputs:
+            targetType: 'inline'
+            script: |
+              helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile)
+
+        - task: HelmDeploy@0
+          displayName: 'Deploy Helm Chart to AKS'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'upgrade'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/$(helmChartFile)'
+            releaseName: '$(releaseName)'
+            valueFile: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+            setValues: |
+              otdsDBUser=$(DB_USER)
+              otdsDBUserPassword=$(OTDS_DB_PASSWORD)
+
