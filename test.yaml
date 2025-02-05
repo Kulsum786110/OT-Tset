@@ -1,0 +1,1184 @@
+# Default values for Experience Cloud helm chart.
+# This is a YAML-formatted file.
+# ===================================================
+# BEGIN: ANCHOR tags section 
+# ===================================================
+
+# ------------------------------------
+# Section to enable services on Experience Cloud
+# ------------------------------------
+
+# This determines whether OTDS is deployed or not. If left blank, default value will be true
+otdsEnabled: &otdsEnabled true
+
+# This determines whether RabbitMQ is deployed or not. If left blank, default value will be true
+rabbitmqEnabled: &rabbitmqEnabled true
+
+# This determines whether Assisted Authoring is deployed or not. If left blank, default value will be true
+assistedAuthoringEnabled: &assistedAuthoringEnabled false
+
+# This determines whether RMA is deployed or not. If left blank, default value will be true
+rmaEnabled: &rmaEnabled false
+
+# This determines whether the Experience Cloud Persistence Service and Admin UI is deployed or not. If left blank, default value will be true
+expcloudServiceEnabled: false
+
+# ------------------------------------
+# Experience Cloud Options
+# ------------------------------------
+
+# The name of the tenant to be create in OTDS
+tenantName: &tenantName dev-exstream
+
+# The username for OTDS account when creating the tenant in OTDS.
+tenantAdminUsername: &tenantAdminUsername admin
+
+# The password to give the "admin" account when creating the tenant in OTDS.  This password must adhere to the 
+# default OTDS password policy, which is:
+#   Minimum eight characters
+#   At least one lower case character
+#   At least one upper case character
+#   At least one number
+#   At least one symbol
+tenantAdminPassword: &tenantAdminPassword $Exstream!
+
+# The password for otexpcadmin
+# When left empty, the otexpcadmin user will use the password from the tenantAdminPassword setting. 
+# When upgrading, please ensure that if this password has been changed that it is updated here as this is required for the upgrade.
+expCloudPassword: &expCloudPassword 
+
+
+# Accessing deployed Services
+# ------------------------------------------
+# The hostname that will be used to configure ingress access to deployed services. For example: otds.company.com
+# - When deploying to minikube, set this value to the empty 
+publicHostname: &publicHostname dev-exstream.nednet.co.za
+
+# The URL scheme that will be used to configure secure access(https) to the deployed services.
+# Set to true if using HTTPS, false otherwise
+# For example: https://otds.company.com, here "useHttps" is set to true
+useHttps: &useHttps true
+
+# The configuration hostname used to configure services using a browser.
+# The default value is the publicHostname - 
+# - when deploying to minikube or instance with reverse proxy, set this value to the reverse proxy hostname
+configHostname: *publicHostname
+
+# The Ingress Controller class value. For example, "nginx".
+# ingressClass: &ingressClass nginx
+ingressClass: &ingressClass nginx
+
+# The name of the secret that contains a TLS certificate for the Ingress Controller. 
+# For more information about creating a secret with a TLS certificate, see the Kubernetes documentation. 
+# If no certificate is provided, the Ingress Controller will use the default certificate.  This setting 
+# is Optional.
+ingressSecret: &ingressSecret dev-exstream-cert
+
+# Enable ingress.
+ingressEnabled: &ingressEnabled true
+
+# The Read Write Once Storage Class to be used by any Experience Cloud service that requires it
+rwoStorageClass: &rwoStorageClass 
+
+# Default image pull policy for Experience Cloud services
+imagePullPolicy: &imagePullPolicy Always
+
+# The JDBC connection string to connect to the database. The database name must match the database 
+# created before installing the Helm chart. The format is: 
+# Postgres: jdbc:postgresql://<Database server URL>:<Databse port>/<Database name>
+# MSSQL: jdbc:sqlserver://<Database server URL>:<Databse port>;databaseName=<Database name>;
+# Oracle (SID): jdbc:oracle:thin:@<Database server URL>:<Databse port>:<SID>
+# Oracle (Service name): jdbc:oracle:thin:@<Database server URL>:<Databse port>/<Service name>
+# Below are a few examples showing Postgres, MSSQL and Oracle connection strings:
+# jdbc:postgresql://postgres.domain.local:5432/expcloud
+# jdbc:sqlserver://mssql.domain.local:1433;databaseName=expcloud;
+# jdbc:sqlserver://mssql.domain.local:1433;databaseName=expcloud;encrypt=false
+# jdbc:oracle:thin:@oracle.domain.local:1521/orcl
+expcloudDBUrl: 
+
+# The database user that was set up when creating the Experience Cloud database.
+expcloudDBUser: 
+
+# The database user password that was set up when creating the Experience Cloud database.
+expcloudDBUserPassword: 
+
+# The Allowed Origins setting used by the Experience Cloud Persistence Service
+expcloudAllowedOrigins: "*"
+
+# If you are using the OpenText Container Registry, or a private registry that requires credentials, 
+# provide the name of the Kubernetes secret that contains the credentials. For information about 
+# creating the secret, see the Kubernetes documentation.  This setting is Optional.
+# This is image pull secret as string
+imagePullSecret: &imagePullSecret 
+
+# If you are using the OpenText Container Registry, or a private registry that requires credentials, 
+# provide the name of the Kubernetes secret that contains the credentials. For information about 
+# creating the secret, see the Kubernetes documentation.  This setting is Optional.  Here is an
+# example of the format:
+# imagePullSecrets: &imagePullSecrets
+#   - name: image-pull-secret
+imagePullSecrets: &imagePullSecrets []
+
+# The timeout for Experience AI, RabbitMQ and OTDS configuration by the ECF Config pod in minutes. 
+# Default value is 5 minutes.
+timeout: 5
+
+# The Service Account to create and use for all Experience Cloud Foundation services.
+serviceAccount: &serviceAccount "experience-cloud-sa"
+
+# Set to false if the Service Account already exists before Experience Cloud Foundation is installed
+# to prevent Helm from attempting to manage it.
+createServiceAccount: true
+
+# ------------------------------------
+# Vault Options
+# ------------------------------------
+# These Vault options are meant to be used with OpenText's internal Vault system.  For installations
+# outside of OpenText's internal managed services, these options should be ignored.
+
+# The address to access the Vault instance.
+vaultUrl: &vaultUrl 
+
+# The namespace where vault is present. private-cloud is default namespace
+vaultNamespace: &vaultNamespace private-cloud
+
+# vault authentication type
+vaultAuthenticationType: &vaultAuthenticationType jwt
+
+# Secret engine path
+vaultSecretEnginePath: &vaultSecretEnginePath 
+
+# Authentication role
+vaultAuthenticationRole: &vaultAuthenticationRole 
+
+# Authentication Path
+vaultAuthenticationPath: &vaultAuthenticationPath 
+
+# OTDS Specific vault properties
+# The flag to decide whether vault should be enabled for OTDS or not. Default value is false
+vaultEnabled: &vaultEnabled false
+
+# Secret engine path for OTDS
+# Value should vaultSecretEnginePath suffixed with /otds
+vaultOtdsSecretEnginePath: &vaultOtdsSecretEnginePath 
+
+# ------------------------------------
+# Section to configure registry for services on Experience Cloud
+# ------------------------------------
+
+# The registry to pull the Experience Cloud containers from
+experienceCloudRegistry: &experienceCloudRegistry 
+
+# The container registry to pull the OTDS images from. For example: docker-registry.company.com.
+otdsRegistry: &otdsRegistry nsnakscontregecm001.azurecr.io
+
+# The registry for the Assisted Authoring container images
+assistedAuthoringRegistry: &assistedAuthoringRegistry 
+
+# The registry for RMA service container image
+rmaRegistry: &rmaRegistry 
+
+# ------------------------------------
+# OTDS Options
+# ------------------------------------
+
+# The JDBC connection string to connect to the database. The database name must match the database 
+# that was created for OTDS. The format is: 
+# Postgres: jdbc:postgresql://<Database server URL>:<Databse port>/<Database name>
+# MSSQL: jdbc:sqlserver://<Database server URL>:<Databse port>;databaseName=<Database name>;
+# Oracle (SID): jdbc:oracle:thin:@<Database server URL>:<Databse port>:<SID>
+# Oracle (Service name): jdbc:oracle:thin:@<Database server URL>:<Databse port>/<Service name>
+# Below are a few examples showing Postgres, MSSQL and Oracle connection strings:
+# jdbc:postgresql://postgres.domain.local:5432/otds
+# jdbc:sqlserver://mssql.domain.local:1433;databaseName=otds;
+# jdbc:sqlserver://mssql.domain.local:1433;databaseName=otds;encrypt=false
+# jdbc:oracle:thin:@oracle.domain.local:1521/orcl 
+#Request DB team to create a Local SQL Admin account and use credentials from secure Azure variable group
+otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net,1433;databaseName=ECM_OTDS;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.a51a56ea8c79.database.windows.net;loginTimeout=30;Authentication=ActiveDirectoryIntegrated;
+
+# The database user that was set up when creating the OTDS database.  If using Oracle it is recommended to set 
+# otds.otdsws.otdsdb.useDefaultSchema to "true" or else OTDS will try to create another user called "OTDS".
+otdsDBUser: &otdsDBUser <nedbank>
+
+# The database user password that was set up when creating the OTDS database.
+otdsDBUserPassword: &otdsDBUserPassword <nedbank> ( secure variable for Devops)
+
+# cryptKey is used for secure synchronized access to backend DB from frontend instances
+# This value is a 16 character ASCII string that has been base64 encoded
+# For example, "MTIzNDU2Nzg5YWNiZGVmZw==" is the base64 encoded value of "123456789acbdefg"
+#otdsCryptKey: &otdsCryptKey <nedbank> (Key to be discussed with Lizelle)
+otdsCryptKey: &otdsCryptKey MTIzNDU2Nzg5YWNiZGVmZw==
+
+# The user otadmin@otds.admin will be created in the OTDS System tenant. This parameter will set this 
+# user's password.
+# Password to be masked to be used from secure group variables
+otadminPassword: &otadminPassword $Exstream!
+
+# ------------------------------------
+# Rabbitmq Options
+# ------------------------------------
+
+# User to create in RabbitMQ
+rabbitmqUsername: &rabbitmqAppUser expcloud
+
+# Password for user to create in RabbitMQ
+rabbitmqPassword: &rabbitmqAppPassword $Exstream!
+
+#RabbitMQ Admin username
+rabbitmqAdminUsername: &rabbitmqAdminUsername admin
+
+#RabbitMQ Admin password
+rabbitmqAdminPassword: &rabbitmqAdminPassword $Exstream!
+
+# ------------------------------------
+# Assisted Authoring Options
+# ------------------------------------
+
+# The JDBC connection string to connect to the database. The database name must match the database 
+# created before installing the Helm chart. The format is: 
+# Postgres: jdbc:postgresql://<Database server URL>:<Databse port>/<Database name>
+# MSSQL: jdbc:sqlserver://<Database server URL>:<Databse port>;databaseName=<Database name>;
+# Oracle (SID): jdbc:oracle:thin:@<Database server URL>:<Databse port>:<SID>
+# Oracle (Service name): jdbc:oracle:thin:@<Database server URL>:<Databse port>/<Service name>
+# Below are a few examples showing Postgres, MSSQL and Oracle connection strings:
+# jdbc:postgresql://postgres.domain.local:5432/expai
+# jdbc:sqlserver://mssql.domain.local:1433;databaseName=expai;
+# jdbc:sqlserver://mssql.domain.local:1433;databaseName=expai;encrypt=false
+# jdbc:oracle:thin:@oracle.domain.local:1521/orcl 
+expaiDBUrl: &expaiDBUrl ""
+
+# The database user that was set up when creating the Experience AI database.
+expaiDBUser: &expaiDBUser ""
+
+# The database user password that was set up when creating the Experience AI database.
+expaiDBUserPassword: &expaiDBUserPassword ""
+
+# If Magellan Text Mining Service is installed, provide the URL and details here and a provider will be created
+# with some default settings automatically.  Leave this blank and all of the other Magellan settings below are ignored.
+# The settings this provider are created with can be edited using the Config UI. The URL for Magellan as Provider. 
+# The format for this field is: http://<service name>.<namespace>.svc.cluster.local:<port>/rs/v2/.  This provider will 
+# only be configured during an install and will not be configured during an upgrade.
+providerMagellanUrl: &providerMagellanUrl 
+
+# The name of the Magallan Provider to be created
+providerMagellanName: &providerMagellanName magellan
+
+# The Magellan Text Mining Service user to use.  This should match the field "credentials.engine.user" from the MTM Helm chart.
+providerMagellanUser: &providerMagellanUser admin
+
+# The Magellan Text Mining Service user password in base 64. This should match the field "credentials.engine.password" from the 
+# MTM Helm chart.
+providerMagellanPassword: &providerMagellanPassword YWRtaW4K
+
+# If LanguageTool is installed, provide the URL and details here and a provider will be created
+# with some default settings automatically.  Leave this blank and all of the other LanguageTool settings are ignored.
+# The settings this provider are created with can be edited using the Config UI. The URL for Magellan as Provider. 
+# The format for this field is: http://<service name>.<namespace>.svc.cluster.local:<port>/v2/.  This provider will 
+# only be configured during an install and will not be configured during an upgrade.
+providerLanguageToolUrl: &providerLanguageToolUrl 
+
+# The name of the Language Tool Provider to be created
+providerLanguageToolName: &providerLanguageToolName languagetool
+
+# ------------------------------------
+# RMA Options
+# ------------------------------------
+
+# RMA Database Settings
+databaseHostname: &dbHost 
+databasePort: &dbPort 5432
+# Database type can be "POSTGRESQL","SQLSERVER" or "ORACLE"
+databaseType: &dbType "POSTGRESQL"
+rmaDBName: &rmaDBName 
+rmaDBUser: &rmaDBUser 
+rmaDBPassword: &rmaDBPassword 
+
+# ------------------------------------
+# Section to define proxy for Experience Cloud Services
+# ------------------------------------
+#Define if proxy is enabled or not
+proxyEnabled: &proxyEnabled false
+
+#Proxy host
+proxyHost: &proxyHost ""
+
+#Http Proxy port 
+httpProxyPort: &httpProxyPort 3128
+
+# No proxy defines a list of destination domain names, domains, IP addresses or other network CIDRs to exclude proxying.
+# If using a proxy, be sure to include "*.svc.cluster.local" in the noProxy list to avoid having internal traffic proxied.
+noProxy: &noProxy "*.svc.cluster.local"
+
+# ------------------------------------
+# NewRelic Options
+# ------------------------------------
+
+# Enable or disable NewRelic monitoring.
+newRelicEnabled: &newRelicEnabled false
+
+# The license key provided by NewRelic.
+newRelicLicenseKey: &newRelicLicenseKey ""
+
+# The proxy host to use for NewRelic.
+newRelicProxyHost: &newRelicProxyHost ""
+
+# The port number to use with the proxy host for NewRelic.
+newRelicProxyPort: &newRelicProxyPort 
+
+# The scheme to use with the proxy host and port. Values can be "http" or "https".
+newRelicProxyScheme: &newRelicProxyScheme ""
+
+# The application name to use for OTDS in NewRelic
+newRelicOTDSAppName: &newRelicOTDSAppName ""
+
+# Suffix to add to the end of the application name for Experience AI's API and Config pods.
+newRelicAssistedAuthoringSuffix: &newRelicAssistedAuthoringSuffix ""
+
+# The application name to use for Experience Cloud persistence service in NewRelic
+newRelicExpCloudAppName: expcloud
+
+# ===================================================
+# END: ANCHOR tags section 
+# ===================================================
+
+# ===================================================
+# BEGIN: Detailed product settings.  Any setting
+# below here is either optional or can be left
+# at the default setting.
+# ===================================================
+
+# ------------------------------------
+# Global Options
+# ------------------------------------
+
+# Add extra pod match labels for Experience AI and RabbitMQ deployments, statefulsets, pods and services globally
+# Other serices (Admin UI, OTDS, RMA) do not yet support this.
+# Example:
+# extraPodMatchLabels: &extraPodMatchLabels
+#   matchkey: matchvalue
+extraPodMatchLabels: &extraPodMatchLabels {}
+
+# ------------------------------------
+# Experience Cloud Detailed Options
+# ------------------------------------
+tenant:
+
+  # The name of the tenant to create in OTDS
+  name: *tenantName
+  
+  # The username for admin account when creating the tenant
+  adminUsername: *tenantAdminUsername
+  
+  # The password to give the "admin" account when creating the tenant
+  adminPassword: *tenantAdminPassword
+  
+  # The name of the OTDS oAuth client to be created.
+  oAuthClientName: experience-cloud
+  
+  # The name of the public (not confidential) OTDS oAuth client to be created.
+  publicOAuthClientName: experience-cloud-public
+  
+  # The name of the OTDS partition to be created.
+  partition: experience-cloud
+  
+  # The password for the otexpcadmin user
+  expCloudPassword: *tenantAdminPassword  
+  
+  # Provide the name and password for a user and the user will be created with admin permissions to Experience AI, 
+  # Experience Cloud (read only) and Rich Media Analysis.  Any services not enabled will be skipped.  The password must adhere to
+  # the password policy.  See comments on "tenantAdminPassword" for details on password policy.
+  monitoringUser:
+  monitoringUserPassword:
+  
+  # Provide the name and password for a user and the user will be created with admin permissions to Experience AI, 
+  # Experience Cloud and Rich Media Analysis.  Any services not enabled will be skipped. The password must adhere to
+  # the password policy.  See comments on "tenantAdminPassword" for details on password policy.
+  businessAdminUser:
+  businessAdminUserPassword:
+  
+# The repository to pull the Experience Cloud containers from
+registry: *experienceCloudRegistry
+
+config:
+
+  # The config pod image
+  image: experience-cloud-config
+  
+  # The tag of the config pod
+  tag: 24.4.0
+  
+  # The service account the config pod should run as.
+  serviceAccount: *serviceAccount
+
+  # Security context for config job container
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+
+  # Security context for config job pod
+  podSecurityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+
+  # Annotations to include on config pod. Example:
+  # podAnnotations:
+  #   annotation-key: 'annotation-value'
+  podAnnotations: {}
+
+  # Labels to include on config pod. Example:
+  # podLabels:
+  #   label-key: 'label-value'
+  podLabels: {}
+  
+  # The number of seconds curl is allowed to wait when communicating with services
+  curlTimeout: 10
+  
+service:
+
+  # Number of replicas for the Experience Cloud Persistence Service/Admin UI deployment.
+  replicas: 1
+  
+  # The database schema to use for the admin service
+  databaseSchema: expcloud
+  
+  # The service pod image
+  image: experience-cloud-service
+    
+  # The tag of the service pod
+  tag: 24.4.0
+  
+  # The deployment upgrade strategy.  Valid values are "Recreate" or "RollingUpdate".  Default is "RollingUpdate".
+  upgradeStrategy: RollingUpdate
+  
+  # The service account for the service pod to use.
+  serviceAccount: *serviceAccount
+
+  annotations: {}
+  
+  ingress:
+    # The name of the secret that contains a TLS certificate for the Ingress Controller used with Experience Cloud Persistence Service/Admin UI deployment.
+    # For more information about creating a secret with a TLS certificate, see the Kubernetes documentation.
+    # If no certificate is provided, the Ingress Controller will use the default certificate.
+    # This setting is Optional.
+    secret: *ingressSecret
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+  resources:
+    requests:
+      
+      # The CPU request for the Experience Cloud Service container. The default value is 0.5. OpenText recommends 0.5 for 
+      # a small installation and 1 for medium or large installations.  This setting is Optional.
+      cpu: 0.5
+      
+      # The memory request for the Experience Cloud Service container. The default value is 1.5Gi. OpenText recommends 
+      # 1.5 for all installation sizes.  This setting is Optional.
+      memory: 1.5Gi
+
+  jvmOptions: "-Xms512m -Xmx1024m"
+
+  # Security context for experience cloud service container 
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+
+  # Security context for experience cloud service pod 
+  podSecurityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+
+  # Annotations to include on Admin UI pods. Example:
+  # podAnnotations:
+  #   annotation-key: 'annotation-value'
+  podAnnotations: {}
+
+  # Labels to include on Admin UI pods. Example:
+  # podLabels:
+  #   label-key: 'label-value'
+  podLabels: {}
+    
+  # Provide a custom truststore for the Admin UI so that it can trust certificates that are not trusted by default in Java  
+  truststore:
+  
+    # The name of the secret that contains the truststore file.  Create with: 
+    # kubectl create secret generic <name> -n <namespace> --from-file=<truststorePath>
+    # Ex. kubectl create secret generic custom-truststore -n expcloud --from-file=/tmp/cacerts
+    secretName: 
+    
+    # The password for the truststore file provided in the secret above.  If left blank, the Admin UI will use the default truststore 
+    password: 
+    
+    # The file name of the truststore that was created in the secret above
+    fileName: cacerts
+
+# ------------------------------------
+# OTDS Detailed Options
+# ------------------------------------
+
+# These are the settings to configure OTDS.
+otds:
+
+  enabled: *otdsEnabled
+
+  global:
+    otdsUseReleaseName: true
+    namespace:
+    imageSource: 
+    imageSourcePublic:
+    imagePullSecret:
+    imagePullPolicy: 
+    serviceAccountName: 
+    serviceType:
+    otdsServiceName: otdsws
+    resourceRequirements: true
+    existingSecret:
+    timeZone: Etc/UTC
+    database:
+      adminDatabase:
+      adminUsername:
+    extraPodMatchLabels: *extraPodMatchLabels
+
+  ingress:
+    enabled: *ingressEnabled
+    secret: *ingressSecret
+    class: *ingressClass
+    annotations: {}
+    exposeIndividualEndpoints: false
+    paths:
+      - "/otds-admin/"
+      - "/otdstenant/"
+      - "/otdsws/"
+      - "/ot-authws/"
+      - "/otds-v2/"
+
+  otdsws:
+    securityContext:
+      fsGroup: 1000
+      runAsGroup: 1000
+      runAsUser: 1000
+      readOnlyRootFilesystem: false
+    podLabels: {}
+    podAnnotations: {}
+    enabled: true
+    serviceAccountName: *serviceAccount
+    statefulSet: false
+    affinity:
+    tolerations:
+    topologySpreadConstraints:
+    ingress:
+      enabled: *ingressEnabled
+      secret:
+      # If changing the prependPath from the default, please be sure set expai.global.env.OTDS_INTERNAL_ADDRESS_OVERRIDE if using
+      # Experience AI and mediaanalysis.global.internal.otds.prependPath if using RMA.
+      prependPath: otds
+    serviceName: otdsws
+    serviceType:
+    serviceAnnotations: {}
+    carrierGradeNAT: true
+    customSecretName:
+    replicas: 1
+    port: 80
+    publicHostname: *publicHostname
+    timeZone:
+    allowDuplicateUsers: true
+    allowNonIndexedSearch: false
+    systemGlobalOAuthClients: "ExstreamSystem"
+    cryptKey: *otdsCryptKey 
+    additionalJavaOpts:
+    enableBootstrapConfig: false
+    existingBootstrapConfig: |
+
+    kerberos:
+      enabled: false
+      keytabFile: |
+  
+      configFile: |
+    
+    adminEmail:
+    adminPassword: *otadminPassword
+    isBizAdmin: false
+    enableCustomizedTruststore: false
+    singleCaCert: |
+  
+    migration:
+      enabled: false
+      usingLegacyImage: false
+      legacyImagePVC:
+      serviceName: opendj
+      servicePort: 1389
+      deploymentName:
+      opendjUri:
+      password:
+      preUpgradeJob:
+        enabled: false
+        timeout: 100h
+        resources:
+          requests:
+            cpu: 0.5
+            memory: 3Gi
+          limits:
+            cpu: 2
+            memory: 3Gi
+          jvmMemory:
+        image:
+          source:
+          name: bitnami/kubectl
+          tag: latest
+    otdsdb:
+      url: *otdsDBUrl
+      username: *otdsDBUser
+      password: *otdsDBUserPassword
+      useDefaultSchema: false
+      automaticDatabaseCreation:
+        enabled: false
+        dbAdmin:
+        dbAdminPassword:
+        dbExtensions:
+          - pg_trgm
+        dbImage:
+          source:
+          name: bitnami/postgresql
+          tag: latest
+          pullPolicy:
+    image:
+      source: *otdsRegistry
+      name: otds-server
+      tag: 24.4.0
+      pullPolicy: *imagePullPolicy
+      pullSecret: *imagePullSecret
+    resources:
+      enabled:
+      requests:
+        cpu: 0.5
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 1.5Gi
+    newrelic:
+      NEW_RELIC_LICENSE_KEY: *newRelicLicenseKey
+      NEW_RELIC_APP_NAME: *newRelicOTDSAppName
+      NEW_RELIC_LOG_FILE_NAME: STDOUT
+      NEW_RELIC_LOG_LEVEL: info
+      NEW_RELIC_BROWSER_MONITORING_AUTO_INSTRUMENT: "false"
+    pvc:
+      enabled: false
+      storage: 256Mi
+      storageClassName:
+    logging:
+      logToFiles: false
+      logToPVC: false
+      logRequests: true
+    vault:
+      enabled: *vaultEnabled
+      agentInjector: false
+      url: *vaultUrl
+      namespace: *vaultNamespace
+      authpath: *vaultAuthenticationPath
+      tokenAudience:
+      proxyAddress:
+      role: *vaultAuthenticationRole
+      secretsPath: *vaultOtdsSecretEnginePath
+    initContainers:
+
+# ------------------------------------
+# rabbitmq Options
+# ------------------------------------
+rabbitmq:
+    # This determines whether rabbitmq is deployed or not.
+    enabled: *rabbitmqEnabled
+    # Expose the rabbit console through ingress
+    global:
+      extraPodMatchLabels: *extraPodMatchLabels
+    extraConfiguration: |
+      management.path_prefix = /rabbitmq
+      consumer_timeout = 172800000
+    auth:
+      ## @param auth.username RabbitMQ application username
+      ## ref: https://github.com/bitnami/bitnami-docker-rabbitmq#environment-variables
+      ##
+      username: *rabbitmqAdminUsername
+      ## @param auth.password RabbitMQ application password
+      ## ref: https://github.com/bitnami/bitnami-docker-rabbitmq#environment-variables
+      ##
+      password: *rabbitmqAdminPassword
+      ## @param auth.erlangCookie Erlang cookie to determine whether different nodes are allowed to communicate with each other
+      ## ref: https://github.com/bitnami/bitnami-docker-rabbitmq#environment-variables
+      ##
+      erlangCookie: erlangCookie
+    
+    # The address to access the Vault instance.
+    vaultUrl: *vaultUrl
+
+    # The namespace where vault is present. private-cloud is default namespace
+    vaultNamespace: *vaultNamespace
+
+    # vault authentication type
+    vaultAuthenticationType: *vaultAuthenticationType
+
+    # Secret engine path
+    vaultSecretEnginePath: *vaultSecretEnginePath
+    
+    # Authentication role
+    vaultAuthenticationRole: *vaultAuthenticationRole
+
+    # Authentication Path
+    vaultAuthenticationPath: *vaultAuthenticationPath
+
+    image:
+      # The container registry to pull the images from, as configured in Push the container image. For 
+      # example: docker-registry.company.com.
+      registry: *experienceCloudRegistry
+      # Docker image pull policy: Always, Never, or IfNotPresent
+      # See: https://kubernetes.io/docs/concepts/configuration/overview/#container-images
+      pullPolicy: *imagePullPolicy
+      # The repository name where the image is located. For 
+      # example: rabbitmq
+      repository: experience-cloud-rabbitmq
+      # The image tag to use.
+      tag: 3.13.6
+      # Image pull secret to use for registry authentication.
+      # See: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      pullSecrets: *imagePullSecrets
+      
+    ## Configure the ingress resource that allows you to access the
+    ## RabbitMQ installation. Set up the URL
+    ## ref: https://kubernetes.io/docs/user-guide/ingress/
+    ##
+    ingress:
+      ## @param ingress.enabled Enable ingress resource for Management console
+      ##
+      enabled: *ingressEnabled
+      ## @param ingress.hostname Default host for the ingress resource
+      ##
+      hostname: *publicHostname
+      ## @param ingress.path Path for the default host.
+      ##
+      path:  /rabbitmq
+      # The Ingress Controller class value. For example, "nginx".  This setting is Optional.
+      ingressClassName: *ingressClass
+      ## @param ingress.annotations Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.
+      annotations: {}
+      ## @param ingress.secrets Custom TLS certificates as secrets
+      ## NOTE: 'key' and 'certificate' are expected in PEM format
+      ## NOTE: 'name' should line up with a 'secretName' set further up
+      ## If it is not set and you're using cert-manager, this is unneeded, as it will create a secret for you with valid certificates
+      ## If it is not set and you're NOT using cert-manager either, self-signed certificates will be created valid for 365 days
+      ## It is also possible to create and manage the certificates outside of this helm chart
+      ## Please see README.md for more information
+      ## e.g:
+      ## secrets:
+      ##   - name: rabbitmq.local-tls
+      ##     key: |-
+      ##       -----BEGIN RSA PRIVATE KEY-----
+      ##       ...
+      ##       -----END RSA PRIVATE KEY-----
+      ##     certificate: |-
+      ##       -----BEGIN CERTIFICATE-----
+      ##       ...
+      ##       -----END CERTIFICATE-----
+      ##
+      secrets: []
+      secretName: *ingressSecret
+    # Was rabbitmqMemoryHighWatermark
+    memoryHighWatermark:
+      enabled: true
+    podManagementPolicy: Parallel
+    # Was persistentVolume
+    persistence:
+      storageClass: *rwoStorageClass
+    # Have to include this, even though we set memoryHighWatermark to absolute, or rabbitmq's helm chart will puke on install
+    resources:
+      limits:
+        memory: &rabbitmqMemory "2Gi"
+    service:
+      type: ClusterIP
+
+    ## @param containerSecurityContext RabbitMQ containers' Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+    ## Example:
+    ##   containerSecurityContext:
+    ##     capabilities:
+    ##       drop: ["NET_RAW"]
+    ##     readOnlyRootFilesystem: true
+    ##
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+
+    ## RabbitMQ pods' Security Context
+    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+    ## @param podSecurityContext.enabled Enable RabbitMQ pods' Security Context
+    ## @param podSecurityContext.fsGroup Group ID for the filesystem used by the containers
+    ## @param podSecurityContext.runAsUser User ID for the service user running the pod
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+      runAsUser: 1001
+    ## RabbitMQ pods ServiceAccount
+    ## @param serviceAccount.name Name of the created serviceAccount
+    ## If not set and create is true, a name is generated using the rabbitmq.fullname template
+    ## If  not set and create is not set, "default" service account would be used. This is the default value
+    serviceAccount:
+      ## @param serviceAccount.create Enable creation of ServiceAccount for RabbitMQ pods
+      ##
+      create: ""
+      ## @param serviceAccount.name Name of the created serviceAccount
+      ## If not set and create is true, a name is generated using the rabbitmq.fullname template
+      ##
+      name: *serviceAccount
+      
+    # ---- metadata annotations ----
+    ## @param podAnnotations RabbitMQ Pod annotations. Evaluated as a template
+    podAnnotations: {}
+    ## @param podLabels RabbitMQ Pod labels. Evaluated as a template
+    podLabels: {}
+
+    ## @param terminationGracePeriodSeconds Default duration in seconds k8s waits for container to exit before sending kill signal.
+    ## Any time in excess of 10 seconds will be spent waiting for any synchronization necessary for cluster not to lose data.
+    ##
+    terminationGracePeriodSeconds: 60
+
+# ------------------------------------
+# Assisted Authoring Detailed Options
+# ------------------------------------
+
+expai:
+  
+  # Any users added to this group will be administrators of Assisted Authoring.  This group will be created by Experience
+  # Cloud
+  adminGroup: &adminGroup expai-admins
+  
+  # This is an optional section to have Experience Cloud set up some default providers for Assisted Authoring.  Leave
+  # both providers URL's blank to have Experience Cloud not create any providers automatically.  These can be created
+  # using the Assisted Authoring Config UI as well.
+  providers:
+  
+    magellan:
+  
+      # If Magellan Text Mining Service is installed, provide the URL and details here and a provider will be created
+      # with some default settings automatically.  Leave this blank and all of the other Magellan settings are ignored.
+      # The settings this provider are created with can be edited using the Config UI.  The format for this field is:
+      # http://<service name>.<namespace>.svc.cluster.local:<port>/rs/v2/
+      url: *providerMagellanUrl
+      
+      # The name of the provider to be created
+      name: *providerMagellanName
+      
+      # The Magellan Text Mining Service user to use
+      user: *providerMagellanUser
+      
+      # The Magellan Text Mining Service user password in base 64
+      password: *providerMagellanPassword
+      
+    languagetool:
+    
+      # If LanguageTool is installed, provide the URL here and a provider will be created with some default settings
+      # automatically.  Leave this blank and all of the other LanguageTool settings are ignored.  The settings this 
+      # provider are created with can be edited using the Config UI.  The format for this field is:
+      # http://<service name>.<namespace>.svc.cluster.local:<port>/v2/
+      url: *providerLanguageToolUrl
+      
+      # The name of the provider to be created
+      name: *providerLanguageToolName
+    
+
+  enabled: *assistedAuthoringEnabled
+  
+  # The default language code to use when one is not provided in the request
+  defaultLanguage: en-US
+
+  global: 
+  
+    # The address to access the Vault instance.
+    vaultUrl: *vaultUrl
+
+    # The namespace where vault is present. private-cloud is default namespace
+    vaultNamespace: *vaultNamespace
+
+    # vault authentication type
+    vaultAuthenticationType: *vaultAuthenticationType
+
+    # Secret engine path
+    vaultSecretEnginePath: *vaultSecretEnginePath
+
+    # Authentication role
+    vaultAuthenticationRole: *vaultAuthenticationRole
+
+    # Authentication Path
+    vaultAuthenticationPath: *vaultAuthenticationPath  
+    
+    # The repository for the Assisted Authoring container images
+    repository: *assistedAuthoringRegistry
+    
+    imagePullSecrets: *imagePullSecrets
+    
+    ingress:
+      host: *publicHostname
+      secret:
+        name: *ingressSecret
+      class: *ingressClass
+    
+    # The service account name.
+    serviceAccount:
+      name: *serviceAccount
+
+    env:
+      
+      HTTP_PROXY: *proxyHost
+      
+      PROXY_PORT: *httpProxyPort
+      
+      NO_PROXY: *noProxy
+      
+      DATABASE_URL: *expaiDBUrl
+      
+      DATABASE_USER: *expaiDBUser
+      
+      DATABASE_PASSWORD: *expaiDBUserPassword
+      
+      DATABASE_SCHEMA: "expai"
+      
+      DATABASE_CONNECTION_MAX_LIFETIME: 600000
+      
+      # Format is "http://<releaseName>-otdsws.<namespace>.svc.cluster.local:80/<OTDS prepend path>/otdsws".  If OTDS is using a blank
+      # prepend path, remove the additional / to make it a valid URL. 
+      OTDS_INTERNAL_ADDRESS_OVERRIDE: ""
+      
+    enable_probes: true
+    
+    newrelic:
+      agent_enabled: *newRelicEnabled
+      license_key: *newRelicLicenseKey
+      proxy_host: *newRelicProxyHost
+      proxy_port: *newRelicProxyPort
+      proxy_scheme: *newRelicProxyScheme
+      application_name_suffix: *newRelicAssistedAuthoringSuffix
+
+    extraPodMatchLabels: *extraPodMatchLabels
+
+  api:
+    enabled: true
+    replicaCount: 1
+    
+    deployment:
+      imagePullPolicy: *imagePullPolicy
+    
+    nodeSelector: {}
+    
+    otds_authentication: false
+    
+    readinessProbe:
+      enabled: true
+    
+    livenessProbe:
+      enabled: true
+
+    sslSecret:
+      enabled: false
+      name: ""
+      cacerts: false
+      expaiP12: false
+      
+    service:
+      annotations: {}
+
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+
+    ingress:
+    
+      enabled: *ingressEnabled
+    
+      annotations:
+      # Add any necessary ingress annotations.  If using OpenShift, use annotation:
+      # route.openshift.io/termination: "edge"
+    
+    env:
+      DEFAULT_TENANT: *tenantName
+      administrator_system_role: *adminGroup
+      EAIS_JAVAX_NET_SSL_TRUSTSTORE: ""
+      EAIS_JAVAX_NET_SSL_TRUSTSTORE_PASSWORD: ""
+      EAIS_HOST_WHITELIST_REGEX: ".*"
+      
+  config:
+    enabled: true
+    replicaCount: 1
+
+    deployment:
+      imagePullPolicy: *imagePullPolicy
+
+    nodeSelector: {}
+
+    readinessProbe:
+      enabled: true
+
+    livenessProbe:
+      enabled: true
+
+    sslSecret:
+      enabled: false
+      name: ""
+      cacerts: false
+      expaiP12: false
+      
+    service:
+      annotations: {}
+
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+    
+    ingress:
+    
+      enabled: *ingressEnabled
+    
+      annotations:
+      # Add any necessary ingress annotations.  If using OpenShift, use annotation:
+      # route.openshift.io/termination: "edge"
+        nginx.ingress.kubernetes.io/affinity: "cookie"
+        nginx.ingress.kubernetes.io/session-cookie-name: "expai-session-affinity"
+        nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+
+    env:
+      administrator_url: ""
+      administrator_system_role: *adminGroup
+      EAIS_JAVAX_NET_SSL_TRUSTSTORE: ""
+      EAIS_JAVAX_NET_SSL_TRUSTSTORE_PASSWORD: ""
+      EAIS_HOST_WHITELIST_REGEX: ".*"
+      USE_HTTPS: *useHttps
+      PUBLIC_HOSTNAME: *publicHostname
+      
+# ------------------------------------
+# RMA Detailed Options
+# ------------------------------------
+mediaanalysis:
+  
+  enabled: *rmaEnabled
+  extensionImages: []
+  # - name:
+  #   image: "<docker registry URL for extension image>"     
+  # - name:
+  #   image: "<docker registry URL for extension image>"
+  
+  # ---- metadata annotations ----
+  # Example:
+  #   podAnnotations:
+  #     backup.velero.io/backup-volumes-excludes: 'rma-custom-volume'
+  #   podLabels:
+  #     app.kubernetes.io/component: 'mediaanalysis'
+  #   containerSecurityContext:
+  #     readOnlyRootFilesystem: true
+  podAnnotations: {}
+  podLabels: {}
+  containerSecurityContext: {}
+  
+  global:
+      useReleaseName: true
+      product: "RMA"
+      namespace:
+      imagePullPolicy:  *imagePullPolicy
+      imagePullSecret: *imagePullSecret
+      repository: *rmaRegistry
+      secureEndpoints: *useHttps
+      publicHostName: *publicHostname
+      newRelicLicenseKey: *newRelicLicenseKey
+      cfcrBaseUrl: &cfcr_base_url
+      # Internal Kubernetes hostnames for OTDS + RMA
+      internal:
+        otds:
+          # if the value is blank,it defaults to "<releasename>-otdsws" or "otdsws" depending on whether "useReleaseName" property is set to true or false
+          host: 
+          # The prepend path should have otds prepend path prefix with forward slash
+          prependPath: /otds
+        rabbitmq:
+          # if the value is blank,it defaults to "<releasename>-rabbitmq" or "rabbitmq" depending on whether "useReleaseName" property is set to true or false
+          host: 
+          port: 5672
+          # The prepend path should have rabbitmq prepend path prefix with forward slash
+          prependPath : /rabbitmq               
+
+  auth:
+      rabbitmqDefaultUser: *rabbitmqAppUser
+      rabbitmqPassword: *rabbitmqAppPassword
+      keystorePass:
+
+  # Configure the database backend for persisting RMA subscriptions
+  database:
+      type: *dbType
+      host: *dbHost
+      port: *dbPort
+      name: *rmaDBName
+      user: *rmaDBUser
+      password: *rmaDBPassword
+
+  service:
+      name: rma
+      type: ClusterIP
+      port: 8093
+      
+  container:
+      name: otmm_rma
+      tag: 24.4.0
+
+  nodeSelector:
+      useNodeSelector: false
+
+  ingress:
+      enabled: *ingressEnabled
+      class: *ingressClass
+      secret: *ingressSecret
+      type: *ingressClass
+      
+  #  PROXY settings
+  javaOptions:
+      proxy: *proxyEnabled
+      proxyhost: *proxyHost
+      proxyport: *httpProxyPort
+      noproxy: *noProxy
+
+  # Service account name and whether RMA should create service account
+  serviceAccount:
+    name: *serviceAccount
+    create: false
+  
+  # vault properties for RMA
+  vault:
+    server:
+      # address of the vault server expressed as a URL and port, e.g., http://1.2.3.4:8200
+      address: *vaultUrl 
+      namespace: *vaultNamespace
+      # if a custom vault secrets engine root is used, specify it here or leave it blank.
+      secretEngineRoot: *vaultSecretEnginePath
+    agent:
+      auth:
+        # this is the Kubernetes authentication path name
+        type: *vaultAuthenticationType
+        path: *vaultAuthenticationPath
+        role: *vaultAuthenticationRole    
+
+  configmaps:
+      #
+      # Media Analysis properties
+      # -------------------------------------------------
+      # Specify image analysis provider: ["Azure", "Google", "AWS"], default is "Azure"
+      MEDIAANALYSIS_IMAGE_PROVIDER: ''
+      # Specify video analysis provider: ["Azure", "Google"], default is "Azure"
+      MEDIAANALYSIS_VIDEO_PROVIDER: ''
+      RABBITMQ_SECRETS_KEY: rabbitmq
+      RABBITMQ_SECRETS_USERNAME_KEY: appUsername
+      RABBITMQ_SECRETS_PASSWORD_KEY: appPassword
+
+# -------------------------------------------------------------
+# Experience Cloud Persistence Service Logging Detailed Options
+# -------------------------------------------------------------
+# Experience Cloud Persistence Service Logging Level
+expcloudServiceLoggingLevel: INFO
+
+# Experience Cloud Persistence Service Hibernate SQL Logging Level
+expcloudServiceHibernateLoggingLevel: ERROR
+
+# Experience Cloud Persistence Service Spring framework Security Logging Level
+expcloudServiceSpringframeworkSecurityLogging: ERROR
+
+# Experience Cloud Persistence Service Spring framework Web Logging Level
+expcloudServiceSpringframeworkWebLogging: ERROR
+
+global:
+  # This is to decide whether to create config-maps in subcharts or not. No need to change this value. 
+  product: "experience-cloud"
