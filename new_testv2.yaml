@@ -74,6 +74,15 @@ stages:
               helm list -n $(namespace)
             displayName: 'List Helm Releases'
 
+          - task: Bash@3
+            displayName: 'Verify Kubernetes Connection'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Verifying access to Kubernetes cluster..."
+                kubectl version --short
+                kubectl get namespaces
+
           # Uninstall the Helm release to delete all resources created by the chart
           - task: HelmDeploy@0
             displayName: 'Uninstall Helm Release'
