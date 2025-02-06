@@ -1,0 +1,23 @@
+trigger: none
+
+variables:
+  kubernetesServiceConnection: 'your-k8s-service-connection'
+  namespace: 'your-namespace'
+
+stages:
+- stage: CleanupNamespace
+  displayName: 'Cleanup Kubernetes Namespace'
+  jobs:
+    - job: DeleteResources
+      displayName: 'Delete All Resources in Namespace'
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - task: Kubernetes@1
+          displayName: 'Delete All Resources in Namespace'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'delete'
+            arguments: 'all --all'
