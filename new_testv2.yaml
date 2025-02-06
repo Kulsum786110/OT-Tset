@@ -1,0 +1,90 @@
+name: deploy-helm-chart_$(Date:yyyyMMdd)$(Rev:r)
+
+trigger: none
+
+variables:
+- group: ExperienceCloudSecrets  
+- name: helmChartVersion
+  value: '24.4.0'
+- name: helmChartFile
+  value: 'opentext-experience-cloud-$(helmChartVersion).tgz'
+- name: helmValuesFile
+  value: 'values.yaml'
+- name: releaseName
+  value: 'experience-cloud'
+- name: namespace
+  value: 'experience-cloud-ns'
+- name: kubernetesServiceConnection
+  value: 'your-k8s-service-connection'
+
+stages:
+- stage: deploy_chart
+  displayName: 'Deploy Helm Chart to AKS'
+  jobs:
+    - job: deploy_helm_chart
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - task: Checkout@2
+          displayName: 'Checkout Git Repository'
+
+        - task: HelmInstaller@0
+          displayName: 'Install Helm'
+          inputs:
+            helmVersionToInstall: 'latest'
+
+        - task: Bash@3
+          displayName: 'Lint Helm Chart'
+          inputs:
+            targetType: 'inline'
+            script: |
+              helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile)
+
+        - task: HelmDeploy@0
+          displayName: 'Deploy Helm Chart to AKS'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'upgrade'
+            releaseName: '$(releaseName)'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/$(helmChartFile)'
+            arguments: '--install --wait --timeout 10m0s --debug -f $(Build.SourcesDirectory)/$(helmValuesFile)'
+
+- stage: cleanup
+  displayName: 'Cleanup Helm Deployment'
+  dependsOn: deploy_chart
+  condition: always()  # Runs cleanup even if deployment fails
+  jobs:
+    - job: delete_helm_chart
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - task: HelmInstaller@0
+          displayName: 'Install Helm'
+          inputs:
+            helmVersionToInstall: 'latest'
+
+        - task: HelmDeploy@0
+          displayName: 'Uninstall Helm Release'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'uninstall'
+            releaseName: '$(releaseName)'
+
+        - task: Bash@3
+          displayName: 'Delete Persistent Volume Claims (PVCs)'
+          inputs:
+            targetType: 'inline'
+            script: |
+              kubectl delete pvc --all -n $(namespace) || true
+
+        - task: Bash@3
+          displayName: 'Delete Namespace'
+          inputs:
+            targetType: 'inline'
+            script: |
+              kubectl delete namespace $(namespace) --wait=true || true
