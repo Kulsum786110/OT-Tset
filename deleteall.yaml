@@ -31,3 +31,38 @@ stages:
             command: 'delete'
             arguments: 'pvc --all'
 
+
+
+- stage: DebugPVC
+  displayName: 'Debug PVC and Pod Status'
+  jobs:
+    - job: CheckPVC
+      displayName: 'Check PVC and Pod Status'
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - task: Kubernetes@1
+          displayName: 'Describe PVCs'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'describe'
+            arguments: 'pvc'
+
+        - task: Kubernetes@1
+          displayName: 'Describe Pods'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'describe'
+            arguments: 'pods'
+
+        - task: Kubernetes@1
+          displayName: 'List Storage Classes'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            command: 'get'
+            arguments: 'sc'
