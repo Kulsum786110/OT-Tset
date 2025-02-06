@@ -1,0 +1,73 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: data-experience-deployment-rabbitmq-0
+  namespace: dev-exstream
+  uid: ef184eb6-eb36-437c-af0b-b9ac93b1ca70
+  resourceVersion: '8096288'
+  creationTimestamp: '2025-02-06T13:19:43Z'
+  labels:
+    app.kubernetes.io/instance: experience-deployment
+    app.kubernetes.io/name: rabbitmq
+  annotations:
+    pv.kubernetes.io/bind-completed: 'yes'
+    pv.kubernetes.io/bound-by-controller: 'yes'
+    volume.beta.kubernetes.io/storage-provisioner: blob.csi.azure.com
+    volume.kubernetes.io/storage-provisioner: blob.csi.azure.com
+  finalizers:
+    - kubernetes.io/pvc-protection
+  managedFields:
+    - manager: kube-controller-manager
+      operation: Update
+      apiVersion: v1
+      time: '2025-02-06T13:20:18Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:pv.kubernetes.io/bind-completed: {}
+            f:pv.kubernetes.io/bound-by-controller: {}
+            f:volume.beta.kubernetes.io/storage-provisioner: {}
+            f:volume.kubernetes.io/storage-provisioner: {}
+          f:labels:
+            .: {}
+            f:app.kubernetes.io/instance: {}
+            f:app.kubernetes.io/name: {}
+        f:spec:
+          f:accessModes: {}
+          f:resources:
+            f:requests:
+              .: {}
+              f:storage: {}
+          f:storageClassName: {}
+          f:volumeMode: {}
+          f:volumeName: {}
+    - manager: kube-controller-manager
+      operation: Update
+      apiVersion: v1
+      time: '2025-02-06T13:20:18Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          f:accessModes: {}
+          f:capacity:
+            .: {}
+            f:storage: {}
+          f:phase: {}
+      subresource: status
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+  volumeName: pvc-ef184eb6-eb36-437c-af0b-b9ac93b1ca70
+  storageClassName: azureblob-fuse-premium
+  volumeMode: Filesystem
+status:
+  phase: Bound
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 8Gi
