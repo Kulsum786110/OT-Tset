@@ -21,3 +21,13 @@ stages:
             namespace: '$(namespace)'
             command: 'delete'
             arguments: 'all --all'
+
+        - task: Kubernetes@1
+          displayName: 'Delete PVCs'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'delete'
+            arguments: 'pvc --all'
+
