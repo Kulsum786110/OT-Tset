@@ -1,0 +1,46 @@
+# Umbrella chart's parent values will override subchart's values 
+# Since the sub chart is considered standalone , it cannot access parent chart values
+allowedOrigins:
+contentSecurityPolicy:
+metrics: false
+deployment: 
+  containerPort: 3128
+#  # optionally specify deployment and container names.
+#  container:
+#    name:
+#  name:
+svc: 
+  port: 3128
+  targetPort: 3128
+
+replicaCount: 1
+
+# Configures the strategy Deployments use to replace old Pods with new ones. Can 
+# be set to RollingUpdate or Recreate. 
+# 
+# For more information see:
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+updateStrategy: RollingUpdate
+
+# Optional values that can be set when using a RollingUpdate strategy for Deployments.
+# Can be an absolute number or a percentage of desired Pods.
+#
+# Note: maxUnavailable and maxSurge cannot both be set to 0
+#
+# For more information see:
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-surge
+# rollingUpdate:
+#   maxUnavailable: 25%
+#   maxSurge: 25%
+
+# Helm recommends not specifying default resources and to leave this as a 
+# conscious choice for the user.
+resources:
+  squid: {}
+    # requests:
+    #   cpu: "1000m"
+    #   memory: "1500Mi"
+    # limits:
+    #   cpu: "3000m"
+    #   memory: "6Gi"
