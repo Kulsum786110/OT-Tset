@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: otds
+spec:
+  gateways:
+  - <gateway.name>
+  hosts:
+  - <host.name>
+  - exstreamecf-otdsws-service
+  http:
+  - match:
+    - uri:
+        prefix: /otds
+    route:
+    - destination:
+        port:
+          number: 80
+        host: exstreamecf-otdsws
