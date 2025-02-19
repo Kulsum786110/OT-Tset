@@ -1,0 +1,199 @@
+name: deploy-helm-chart_$(Date:yyyyMMdd)$(Rev:r)
+
+trigger: none
+
+variables:
+- group: Exstream_Dev_group 
+- name: helmChartVersion
+  value: '24.4.0'
+- name: helmChartFile
+  value: 'opentext-experience-cloud-$(helmChartVersion).tgz'
+- name: helmValuesFile
+  value: 'experience_values.yaml'
+- name: releaseName
+  value: 'experience-deployment'
+- name: namespace
+  value: 'dev-exstream'
+- name: kubernetesServiceConnection
+  value: 'ecm-dev-k8s-cluster'
+- name: SecretProviderClass
+  value: 'SecretProviderClass.yaml'
+
+
+stages:
+- stage: deploy_chart
+  displayName: 'Deploy Helm Chart'
+  jobs:
+    - job: deploy_helm_chart
+      displayName: 'Deploy Helm Chart'
+      pool:
+        name: 'AZ-NSN-INT-AGENTS'
+      steps:
+        - checkout: self
+          displayName: 'Checkout Repository'
+          
+        - task: Kubernetes@1
+          displayName: Install SecretProvierClass
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: 'ecm-dev-k8s-cluster'
+            namespace: 'dev-exstream'
+            command: 'apply'
+            useConfigurationFile: true
+            configuration: '$(Build.SourcesDirectory)/SecretProviderClass.yaml'
+            secretType: 'dockerRegistry'
+            containerRegistryType: 'Azure Container Registry'
+
+        - task: Bash@3
+          displayName: 'Lint Helm Chart'
+          inputs:
+            targetType: 'inline'
+            script: |
+              helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile) 
+
+        - task: HelmDeploy@0
+          displayName: 'Deploy Helm Chart to AKS'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'upgrade'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/$(helmChartFile)'
+            releaseName: '$(releaseName)'
+            valueFile: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+            setValues: |
+             otdsDBUser=$(DB_USERNAME)
+             otdsDBUserPassword=$(SRV-ECMOTDS-DEV)
+            # arguments: '--install --force --wait --timeout 10m0s --debug -f $(Build.SourcesDirectory)/$(helmValuesFile)'
+
+- stage: cleanup
+  displayName: 'Cleanup Helm Deployment'
+  dependsOn: deploy_chart
+  condition: always()  # Ensures cleanup runs even if the deployment fails
+  jobs:
+      - job: delete_helm_chart
+        displayName: 'Uninstall Helm Release'
+        pool:
+          name: 'AZ-NSN-INT-AGENTS'
+        steps:
+          # Verify Helm Installation (since Helm is already installed on your agent)
+          - script: |
+              helm version
+            displayName: 'Verify Helm Installation'
+
+          # - task: Bash@3
+          #   displayName: 'Verify Kubernetes Connection'
+          #   inputs:
+          #     targetType: 'inline'
+          #     script: |
+          #       echo "Verifying access to Kubernetes cluster..."
+          #       kubectl version --short
+          #       kubectl get namespaces  
+
+          # # List existing Helm releases before uninstalling for debugging
+          # - script: |
+          #     echo "Listing Helm Releases in Namespace: $(namespace)"
+          #     helm list -n $(namespace)
+          #   displayName: 'List Helm Releases'
+
+        
+
+          # Uninstall the Helm release to delete all resources created by the chart
+          - task: HelmDeploy@1
+            displayName: 'Uninstall Helm Release'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'ecm-dev-k8s-cluster'
+              namespace: '$(namespace)'  # Target namespace
+              command: 'uninstall'
+             # releaseName: '$(releaseName)'  # Helm release name to uninstall
+              arguments: >
+                $(releaseName) 
+
+         
+
+# trigger: none
+
+# variables:
+#    kubernetesServiceConnection: 'ecm-dev-k8s-cluster'
+#    namespace: 'dev-exstream'
+
+# stages:
+- stage: CleanupNamespace
+  displayName: 'Cleanup Kubernetes Namespace'
+  jobs:
+    - job: DeleteResources
+      displayName: 'Delete All Resources in Namespace'
+      pool:
+        name: 'AZ-NSN-INT-AGENTS'
+      steps:
+        - task: Kubernetes@1
+          displayName: 'Delete All Resources in Namespace'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'delete'
+            arguments: 'all --all'
+
+        - task: Kubernetes@1
+          displayName: 'Delete PVCs'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'delete'
+            arguments: 'pvc --all'
+
+
+# - stage: DebugPVC
+#   displayName: 'Debug PVC and Pod Status'
+#   jobs:
+#     - job: CheckPVC
+#       displayName: 'Check PVC and Pod Status'
+#       pool:
+#         name: 'AZ-NSN-INT-AGENTS'
+#       steps:
+        # - task: Kubernetes@1
+        #   displayName: 'List Persistent Volumes'
+        #   inputs:
+        #     connectionType: 'Kubernetes Service Connection'
+        #     kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+        #     command: 'get'
+        #     arguments: 'pv'
+
+        # # Describe all Persistent Volumes for detailed info
+        # - task: Kubernetes@1
+        #   displayName: 'Describe Persistent Volumes'
+        #   inputs:
+        #     connectionType: 'Kubernetes Service Connection'
+        #     kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+        #     command: 'describe'
+        #     arguments: 'pv'
+      
+        # - task: Kubernetes@1
+        #   displayName: 'Describe PVCs'
+        #   inputs:
+        #     connectionType: 'Kubernetes Service Connection'
+        #     kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+        #     namespace: '$(namespace)'
+        #     command: 'describe'
+        #     arguments: 'pvc'
+
+        # - task: Kubernetes@1
+        #   displayName: 'Describe Pods'
+        #   inputs:
+        #     connectionType: 'Kubernetes Service Connection'
+        #     kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+        #     namespace: '$(namespace)'
+        #     command: 'describe'
+        #     arguments: 'pods'
+
+        # - task: Kubernetes@1
+        #   displayName: 'List Storage Classes'
+        #   inputs:
+        #     connectionType: 'Kubernetes Service Connection'
+        #     kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+        #     command: 'get'
+        #     arguments: 'sc'
