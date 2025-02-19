@@ -1,4 +1,4 @@
-# Default values for Experience Cloud helm chart.
+## Default values for Experience Cloud helm chart.
 # This is a YAML-formatted file.
 # ===================================================
 # BEGIN: ANCHOR tags section 
@@ -45,7 +45,7 @@ tenantAdminPassword: &tenantAdminPassword $Exstream!
 # The password for otexpcadmin
 # When left empty, the otexpcadmin user will use the password from the tenantAdminPassword setting. 
 # When upgrading, please ensure that if this password has been changed that it is updated here as this is required for the upgrade.
-expCloudPassword: &expCloudPassword 
+expCloudPassword: &expCloudPassword $Exstream!
 
 
 # Accessing deployed Services
@@ -78,7 +78,7 @@ ingressSecret: &ingressSecret dev-exstream-cert
 ingressEnabled: &ingressEnabled true
 
 # The Read Write Once Storage Class to be used by any Experience Cloud service that requires it
-rwoStorageClass: &rwoStorageClass 
+rwoStorageClass: &rwoStorageClass
 
 # Default image pull policy for Experience Cloud services
 imagePullPolicy: &imagePullPolicy Always
@@ -124,11 +124,11 @@ imagePullSecrets: &imagePullSecrets []
 timeout: 5
 
 # The Service Account to create and use for all Experience Cloud Foundation services.
-serviceAccount: &serviceAccount "experience-cloud-sa"
+serviceAccount: &serviceAccount "exstream-sa"
 
 # Set to false if the Service Account already exists before Experience Cloud Foundation is installed
 # to prevent Helm from attempting to manage it.
-createServiceAccount: true
+createServiceAccount: false
 
 # ------------------------------------
 # Vault Options
@@ -167,7 +167,7 @@ vaultOtdsSecretEnginePath: &vaultOtdsSecretEnginePath
 # ------------------------------------
 
 # The registry to pull the Experience Cloud containers from
-experienceCloudRegistry: &experienceCloudRegistry 
+experienceCloudRegistry: &experienceCloudRegistry nsnakscontregecm001.azurecr.io
 
 # The container registry to pull the OTDS images from. For example: docker-registry.company.com.
 otdsRegistry: &otdsRegistry nsnakscontregecm001.azurecr.io
@@ -194,14 +194,18 @@ rmaRegistry: &rmaRegistry
 # jdbc:sqlserver://mssql.domain.local:1433;databaseName=otds;encrypt=false
 # jdbc:oracle:thin:@oracle.domain.local:1521/orcl 
 #Request DB team to create a Local SQL Admin account and use credentials from secure Azure variable group
-otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net,1433;databaseName=ECM_OTDS;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.a51a56ea8c79.database.windows.net;loginTimeout=30;Authentication=ActiveDirectoryIntegrated;
-
+#otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net,1433;databaseName=ECM_OTDS;encrypt=true;trustServerCertificate=true;hostNameInCertificate=*.a51a56ea8c79.database.windows.net;loginTimeout=30;
+otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net,1433;databaseName=ECM_OTDS;encrypt=true;trustServerCertificate=true;loginTimeout=30;
+#otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433/ECM_OTDS?user=SRV-ECMOTDS-DEV&password=$(SRV-ECMOTDS-DEV)&sslmode=required;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.a51a56ea8c79.database.windows.net;loginTimeout=30;
+#otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433;databaseName=ECM_OTDS;user=SRV-ECMOTDS-DEV;password=$(SRV-ECMOTDS-DEV);encrypt=true;trustServerCertificate=false;loginTimeout=30;
+#otdsDBUrl: &otdsDBUrl jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net,1433;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.a51a56ea8c79.database.windows.net;loginTimeout=30;Authentication=ActiveDirectoryIntegrated;
+#otdsDBUrl: &otdsDBUrl ""
 # The database user that was set up when creating the OTDS database.  If using Oracle it is recommended to set 
 # otds.otdsws.otdsdb.useDefaultSchema to "true" or else OTDS will try to create another user called "OTDS".
-otdsDBUser: &otdsDBUser <nedbank>
+otdsDBUser: &otdsDBUser SRV-ECMOTDS-DEV
 
 # The database user password that was set up when creating the OTDS database.
-otdsDBUserPassword: &otdsDBUserPassword <nedbank> ( secure variable for Devops)
+otdsDBUserPassword: &otdsDBUserPassword "somepassword"
 
 # cryptKey is used for secure synchronized access to backend DB from frontend instances
 # This value is a 16 character ASCII string that has been base64 encoded
@@ -525,7 +529,7 @@ otds:
     imageSourcePublic:
     imagePullSecret:
     imagePullPolicy: 
-    serviceAccountName: 
+    serviceAccountName:
     serviceType:
     otdsServiceName: otdsws
     resourceRequirements: true
@@ -626,7 +630,7 @@ otds:
       url: *otdsDBUrl
       username: *otdsDBUser
       password: *otdsDBUserPassword
-      useDefaultSchema: false
+      useDefaultSchema: true
       automaticDatabaseCreation:
         enabled: false
         dbAdmin:
@@ -783,7 +787,10 @@ rabbitmq:
     podManagementPolicy: Parallel
     # Was persistentVolume
     persistence:
-      storageClass: *rwoStorageClass
+      enabled: false
+      storageClass: *rwoStorageClass 
+      #existingClaim: 'dev-exstream-shared-pvc'
+
     # Have to include this, even though we set memoryHighWatermark to absolute, or rabbitmq's helm chart will puke on install
     resources:
       limits:
