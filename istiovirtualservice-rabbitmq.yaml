@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: rabbitmq
+spec:
+  gateways:
+  - <gateway.name>
+  hosts:
+  - <host.name>
+  - exstreamecf-rabbitmq-service
+  http:
+  - match:
+    - uri:
+        prefix: /rabbitmq
+    route:
+    - destination:
+        port:
+          number: 15672
+        host: exstreamecf-rabbitmq
