@@ -1,0 +1,565 @@
+## Version: 24.4.6+59452
+## Documentation for this chart is available here
+
+global:
+  ## Docker repository containing the exstream images
+  dockerRepository: espirece.azurecr.io
+
+  imagePullSecrets: [  ]
+  
+  readOnlyRootFilesystem: true
+
+  batch:
+    enabled: true
+    version: 24.4.0.4680
+
+  design:
+    enabled: true
+    version: 24.4.0.24348
+
+  empower:
+    enabled: false
+    version: 24.4.0.23991
+    editor:
+      upload:
+        job:
+          enabled: true
+
+  extraWaitForEndpoints: {}
+  extraShutdownEndpoint: {}
+
+  hikari:
+    minIdle: 10
+    maxPool: 10
+    maxLifetime: 600000
+    idleTimeout: 300000 
+    connTimeout: 30000
+
+  namespace:
+
+  ondemand:
+    enabled: true
+    version: 24.4.0.4680
+
+  orchestration:
+    enabled: true
+    version: 24.4.0.6361
+    customPlugins:
+      enabled: false
+      path: "plugins"
+      embedded: false
+
+  eep:
+    enabled: false
+    version: 24.4.0.1538
+    dataPeristencePeriod: 7
+    cleanup:
+      batchSize: 50000
+    
+  assuredDelivery:
+    enabled: false
+    schedule:
+      report: "*/15 * * * *"
+    consolidation:
+      timeout: 7200  
+        
+  ei:
+    enabled: false
+    version: 24.4.0.1675
+    cleanup:
+      batchSize: 50000
+
+  rationalization:
+    enabled: false
+    version: 24.4.0.2280
+
+  squid:
+    version: 24.4.0.64
+    enabled: false
+    port: 3128
+    icapServiceUrl: icap://exstreamecf-clamav-clamav.default.svc.cluster.local:1344/squidclamav
+    client_request_buffer_max_size: 150
+    
+  otds:
+    enabled: true
+    externalBackEnd:
+    externalFrontEnd: http://otdsespire.centralindia.cloudapp.azure.com/otds
+    oauth2:
+
+  istio:
+    virtualService:
+      enabled: false
+      gateways: []
+
+  ingress:
+    enabled: true
+    hostname: otdsespire.centralindia.cloudapp.azure.com
+    hostport:
+    context: ""
+    defaultAnnotationsType: nginx
+    annotations: {}
+    className: azure-application-gateway
+
+  tls:
+    enabled: false
+    crt: ""
+    key: ""
+    secretName: ""
+
+  frontEnd:
+    protocol: auto
+
+  trust:
+    custom:
+      enabled: false
+      source: ""
+      password:
+
+  exstreamdb:
+    dbType: POSTGRES
+    svcName: ""
+    svcPort: 8888
+
+  dasdb:
+    schema:
+      prefix: ""
+      autoManage:
+        enabled: true
+        username: 
+        password: 
+    externalDb:
+      dbType: POSTGRES
+      username: 
+      password: 
+      url: jdbc:postgresql://espireopentenxtcndb.postgres.database.azure.com:5432/exstream
+      # Updated schema for Design service:
+      schema: exd_system
+      usernameSuffix: null
+    vault:
+      enginerolepath:
+        system:
+        schema:
+
+  orcdb:
+    schema:
+      prefix: ""
+      autoManage:
+        enabled: true
+        username: 
+        password: 
+    externalDb:
+      dbType: POSTGRES
+      username: 
+      password: 
+      url: jdbc:postgresql://espireopentenxtcndb.postgres.database.azure.com:5432/exstream
+      # Updated schema for Orchestration service:
+      schema: exo_system
+      usernameSuffix: null
+    vault:
+      enginerolepath:
+        system:
+        schema:
+  
+  empowerdb:
+    schema:
+      prefix: ""
+      autoManage:
+        enabled: true
+        username: 
+        password: 
+      shared:
+        name: shared_schema
+        username: 
+        password: !
+      system:
+        name: system_schema
+        username: 
+        password: 
+    externalDb:
+      dbType: POSTGRES
+      url: jdbc:postgresql://espireopentenxtcndb.postgres.database.azure.com:5432/exstream
+      # Updated schema for Empower service:
+      schema: exe_system
+      usernameSuffix: null
+    vault:
+      enginerolepath:
+        system:
+        schema:
+        shared:
+
+  rationalizationdb:
+    schema:
+      prefix: ""
+      autoManage:
+        enabled: true
+        username: 
+        password: 
+    externalDb:
+      dbType: POSTGRES
+      username: 
+      password: 
+      url: jdbc:postgresql://espireopentenxtcndb.postgres.database.azure.com:5432/exstream
+      # Updated schema for Rationalization service:
+      schema: exr_system
+      usernameSuffix: null
+
+  eidb:
+    schema:
+      prefix: ""
+      autoManage:
+        enabled: true
+        username: 
+        password: 
+    externalDb:
+      dbType: POSTGRES
+      username: 
+      password: 
+      url: jdbc:postgresql://espireopentenxtcndb.postgres.database.azure.com:5432/exstream
+      # Updated schema for Experience Insights service:
+      schema: exi_system
+      usernameSuffix: null
+
+  eepdb:
+    schema:
+      prefix: ""
+      autoManage:
+        enabled: true
+        username: 
+        password: 
+    externalDb:
+      dbType: POSTGRES
+      username: 
+      password: 
+      url: jdbc:postgresql://espireopentenxtcndb.postgres.database.azure.com:5432/exstream
+      # Updated schema for EEP service:
+      schema: eep_system
+      usernameSuffix: null
+
+  storage:
+    tmp:
+      path: /tmp
+    shared:
+      type: nfs
+      s3:
+        accesskey: ""
+        secretkey: ""
+        endpoint: 
+        region: ""
+        bucket: ""    
+        forcepathstyle: false
+        asynchronousUpload: true
+        numRuns: 19
+        vault:
+          enabled: false
+          enginerolepath: ""
+      pvc:
+        enabled: true
+      className: nfs
+      userId: 5001
+      groupId: 5001
+      fsGroup:
+      umask:
+      size: 10Gi
+      local:
+        enabled: false
+        path: "/c/ExstreamOrcRoot"
+    
+    memory:
+      sizeLimit: 64Mi
+
+  rabbitmq:
+    host:
+    port:
+    vhost:
+    username: 
+    password: 
+    queue:
+      namePrefix: exstream
+    tls:
+      enabled: false
+      useClientCertificate: false
+      authMechanism: plain
+    useQuorumQueues: true
+    frameMax: 131072
+
+  ot2:
+    enabled: false
+    ets:
+      backend:
+        url: http://xx.xx.xx.xx:8080
+    css:
+      backend:
+        url: https://contentservice
+    cms:
+      backend:
+        url: https://cms
+    utils:
+      version: 24.4.0.225
+
+  schema:
+    upgrade:
+      job:
+        enabled: true
+
+  svc:
+    type: ClusterIP
+
+  vault:
+    url: 
+    authenticationPath:
+    secretEngine:
+    secretBasePath:
+    namespace:
+    token:
+
+  privateCloud: false
+
+  azure:
+    keyVault:
+      enabled: false
+      vaultUrl:
+      secretBasePath:
+      release:
+
+  extraResourceLabels: {}   
+  extraPodMatchLabels: {}   
+  extraResourceAnnotations: {}
+
+batch:
+  replicaCount: 1
+  metrics: false
+  schedule:
+    cleanup: "20 * * * *"
+    maxAgeMillis: "604800000"
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}
+  resources:
+    batch: {}
+    cleanupCron: {}
+  serviceAccountName: 
+  storage: {}
+  terminationGracePeriodSeconds: 28800
+  vaultRole: 
+
+design:
+  replicaCount: 1
+  metrics: false
+  allowedOrigins: ""
+  local: false
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}
+  resources:
+    design: {}
+    schema: {}
+    upgradeJob: {}
+  sameSiteCookie: None
+  partitionedCookie: true
+  serviceAccountName: 
+  vaultRole: 
+
+empower:
+  replicaCount: 1
+  metrics: false
+  allowedOrigins: ""
+  sameSiteCookie: None
+  partitionedCookie: true
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}
+  serviceAccountName: 
+  vaultRole: 
+  audit:
+    enabled: true
+  hikari:
+    minIdle: 10
+    maxPool: 10
+    maxLifetime: 600000
+    idleTimeout: 300000 
+    connTimeout: 30000
+  resources:
+    empower: {}
+    schema: {}
+    editorUploadJob: {}
+  spring:
+    zipkinEnabled: false
+    zipkinBaseUrl: http://zipkin:9411/
+    sleuthSamplerProbability: 0.0
+
+ondemand:
+  replicaCount: 1
+  engineTimeoutMillis:
+  metrics: false
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}
+  resources:
+    ondemand: {}
+  serviceAccountName:
+  storage: {}
+  vaultRole: 
+
+orchestration:
+  replicaCount: 1
+  gracefulTerminationTimeout: 28800
+  metrics: false
+  allowedOrigins: ""
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}
+  serviceAccountName: 
+  vaultRole: 
+  resources:
+    orchestration: {}
+    schema: {}
+    cleanupCron: {}
+  schedule:
+    cleanup: "*/60 * * * *"
+    sysCronJob:
+      init: false
+      overwrite: true
+      markDeleted:
+        enabled: true
+        name: sys_markJobsForDeletion
+        cronExpression: "0 23 * * SAT"
+        timeSinceEndOfJob: 30
+      cancel:
+        enabled: true
+        name: sys_cancelJobs
+        cronExpression: "0 20 * * SAT"
+        timeSinceStartOfJob: 14
+      wipe:
+        enabled: true
+        name: sys_wipeJobs
+        cronExpression: "0 23 * * SUN"
+      wipeSortingAssets:
+        enabled: true
+        name: sys_wipeSortingAssets
+        cronExpression: "0 22 * * SUN"
+        timeSinceCreated: 30
+      expireSortingAssets:
+        enabled: false
+        name: sys_expireSortingAssets
+        cronExpression: "0 22 * * SAT"
+        timeSinceCreated: 14
+  sqs:
+    enabled: false
+    keyid: ""
+    secretkey: ""
+    region: ""
+    queueName: ""
+    endpoint: ""
+  azure:
+    enabled: false
+    storageaccount: ""
+    accesskey: ""
+    queue: ""
+  gcs:
+    enabled: false
+    secretkey: ""
+    projectid: ""   
+    subscriptionid: ""
+  multiPartMaxFileSize: "2GB"
+  transactionsDeletionDays: 365
+  flowScriptsAllowImport: true
+  maxJobsToFetch: 50000
+  maxJobsToDelete: 500  
+  maxSqlQueryParameters: 2000
+  maxDeleteJobTracingSize: 10
+  tempFilenameSuffix: ".tmp"
+  useTempFile: true
+  
+ei:
+  hikari:
+    minIdle: 3
+    maxPool: 3
+  replicaCount: 
+    api: 1
+    cme: 1
+    ci: 1
+  metrics: false
+  allowedOrigins: ""
+  schedule:
+    event: "*/10 * * * *"
+    cleanup: "*/50 * * * *"
+  extraEnvironmentVars: {}  
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}  
+  resources:
+    configApi: {}
+    customMedadataExtractor: {}
+    covisintIntegrator: {}
+    schema: {}
+    upgradeJob: {}
+    cron: {}
+    cleanupCron: {}
+  serviceAccountName: 
+  vaultRole: 
+
+rationalization:
+  replicaCount: 1
+  metrics: false
+  allowedOrigins: ""
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}
+  resources:
+    rationalizationApi: {}
+    schema: {}
+    rationalizationJobs: {}
+  serviceAccountName: 
+  vaultRole: 
+  
+eep:
+  replicaCount: 1
+  metrics: false
+  allowedOrigins: ""
+  schedule:
+    event: "*/15 * * * *"
+    cleanup: "*/60 * * * *"
+  extraEnvironmentVars: {}  
+  extraSecretEnvironmentVars: []
+  extraContainerProperties: {}
+  extraDeploymentProperties: {}  
+  resources:
+    eep: {}
+    schema: {}
+    cron: {}
+    cleanupCron: {}
+  serviceAccountName: 
+  vaultRole: 
+
+squid:
+  replicaCount: 1
+  resources:
+    squid: {}
+
+upload-included-engine:
+  version: 24.4.0.4711
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  resources:
+    uploadJob: {}
+  serviceAccountName: 
+  vaultRole: 
+
+encryption:
+  defaultKey:  
+  keys:
+#    key1: 
+
+bootstrap:
+  activeDeadlineSeconds: 360
+  resources:
+    bootstrapJob: {}
+  vaultRole:
+  storage:
+    tempVolume: {}
