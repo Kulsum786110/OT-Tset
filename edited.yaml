@@ -1,0 +1,147 @@
+{{- if .Values.global.schema.upgrade.job.enabled }}
+{{- if .Values.global.orcdb.schema.autoManage.enabled }}
+{{- include "beginPreHookAsset" . -}}
+
+{{- if .Values.global.orchestration.enabled -}}
+
+{{- $orcDockerImage := include "getOrcDockerImage" . -}}
+{{- $containerName := "orchestration-schema" -}}
+{{- $podName := "schema" -}}
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}-schema-job{{- include "getHookJobNameSuffix" . }}
+  {{- include "namespaceMetadata" . | nindent 2 }}
+  annotations:
+{{ include "preInstallHookJobAnnotations" . | indent 4 }}
+{{ include "getExtraResourceAnnotations" (dict "dot" . "typeLabel" "job") | nindent 4 }}
+  labels:
+{{ include "getExtraResourceLabels" (dict "dot" . "typeLabel" "job") | nindent 4 }}
+{{- if .Values.global.azure.keyVault.enabled }}
+    azure.workload.identity/use: 'true'
+{{- end }}
+spec:
+{{ include "preInstallSchemaSpecs" . | indent 2 }}
+  template:
+    metadata:
+{{- if .Values.global.azure.keyVault.enabled }}
+      namespace: {{ include "getExstreamReleaseNamespace" . }}
+{{- end }}
+      annotations:
+{{ include "getExtraResourceAnnotations" (dict "dot" . "typeLabel" "pod") | nindent 8 }}
+      labels:
+{{ include "getJavaVersionLabels" . | nindent 8 }}
+{{ include "getExtraResourceLabels" (dict "dot" . "typeLabel" "pod") | nindent 8 }}
+{{- if .Values.global.azure.keyVault.enabled }}
+        azure.workload.identity/use: 'true'
+{{- end }}
+    spec:
+      {{ include "getNodeSelector" .Values | nindent 6 }}
+      {{ include "getServiceAccount" .Values | nindent 6 }}
+      {{- include "imagePullSecrets" . | nindent 6 }}
+      {{- include "preInstallHookSpecs" . | nindent 6 }}
+      securityContext:
+        {{- include "runAsIds" . | nindent 8 }}
+      containers:
+        - name: {{ $containerName }}
+          image: {{ $orcDockerImage }}
+          {{- include "imagePullPolicy" . | nindent 10 }}
+          securityContext:
+            {{- include "getReadOnlyRootFilesystemProperty" . | nindent 12 }}
+            {{- include "getDefaultSecurityContextProperties" . | nindent 12 }}
+          resources:
+            {{ .Values.resources.schema | toYaml | indent 12 | trim }}
+          envFrom:
+          - configMapRef:
+              name: {{ .Release.Name }}-orchestration-config{{ include "preInstallHookNameSuffix" . }}
+          env:
+            - name: EXSTREAM_SCHEMA_INIT
+              value: "true"
+            {{- include "getWaitForEndpointsVar" (dict "dot" . "pod" $podName) | nindent 12 }}
+            {{- include "getShutdownEndpointsVar" (dict "dot" . "pod" $podName) | nindent 12 }}
+            {{- include "getPodMetadataEnvVars" (dict "values" . "containerName" $containerName) | nindent 12 }}
+            {{- include "getS3Properties" . | nindent 12 }}
+  {{- if .Values.global.readOnlyRootFilesystem }}
+            - name: READ_ONLY_FILESYSTEM
+              value: "true"
+  {{- end }}            
+            - name: ENCRYPTION_DEFAULTKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keys-secret{{ include "preInstallHookNameSuffix" . }}
+                  key: defaultKey
+            - name: ENCRYPTION_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-keys-secret{{ include "preInstallHookNameSuffix" . }}
+                  key: keys
+            {{- include "trustStorePassword" . | nindent 12 }}
+            {{- include "extraEnvironmentVars" .Values | nindent 12 }}
+            {{- include "rabbitSecrets" . | nindent 12 }}
+{{- if include "needDatabaseSecret" . }}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: dev-sql-password
+                  key: exstreamDBUser
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dev-sql-password
+                  key: exstreamDBPasword
+{{- if .Values.global.orcdb.schema.autoManage.enabled }}
+            - name: EXSTREAM_SCHEMA_MANAGEMENT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: dev-sql-password
+                  key:  exstreamDBUser
+            - name: EXSTREAM_SCHEMA_MANAGEMENT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dev-sql-password
+                  key: exstreamDBPasword  
+{{- end }}
+{{- end }}
+{{- include "getAzureKeyVaultProperties" . | nindent 12 }}
+        volumeMounts:
+          - name: secrets-store
+            mountPath: "/mnt/secrets-store"          
+          {{- if not .Release.IsInstall }}
+          {{- if eq .Values.global.storage.shared.type "nfs"}}
+          - mountPath: "/mnt/nfs"
+            name: nfs-volume
+          {{- end }}
+          {{- end }}
+          {{- include "trustStoreVolumeMount" . | nindent 10 }}
+          {{- include "extraSecretVolumeMount" . | nindent 10 }}
+          {{- include "tempVolumeMount" . | nindent 10 }}
+        {{- include "extraContainers" (dict "dot" . "pod" $podName) | nindent 8 }}
+
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: azure-ecm-kvname      
+{{- if eq .Values.global.storage.shared.type "nfs"}}
+{{- if not .Release.IsInstall }}
+        - name: nfs-volume
+{{ if .Values.global.storage.shared.local.enabled }}
+          hostPath:
+            path: {{required "global.storage.shared.local.path required" .Values.global.storage.shared.local.path}}
+{{ else }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-shared-storage-pvc
+{{ end }}
+{{- end }}
+{{- end }}
+        {{- include "trustStoreVolume" . | nindent 8 }}
+        {{- include "extraSecretVolume" . | nindent 8 }}
+        {{- include "tempVolume" . | nindent 8 }}
+{{- end }}
+
+{{- include "endPreHookAsset" . -}}
+{{- end }}
+{{- end }}
