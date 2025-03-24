@@ -1,0 +1,1494 @@
+## Version: 24.4.6+59452
+## Documentation for this chart is available here
+
+global:
+  ## Docker repository containing the exstream images
+  # Can be overridden by global.image.source or SubChartName.image.source 
+  dockerRepository: nsnakscontregecm001.azurecr.io
+
+  
+  imagePullSecrets: [  ]
+
+  ## Support for readOnlyRootFilesystem container securityContext
+  readOnlyRootFilesystem: true
+
+  batch:
+    enabled: true
+    # Used as the default docker image tag. Can be overridden by batch.image.tag
+    version: 24.4.0.4711
+
+  design:
+    enabled: true
+    # Used as the default docker image tag. Can be overridden by design.image.tag
+    version: 24.4.0.24392
+
+  empower:
+    enabled: false
+    # Used as the default docker image tag. Can be overridden by empower.image.tag
+    version: 24.4.0.24008
+    editor:
+      upload:
+        job:
+          enabled: true
+
+  # Endpoints that all pods should wait for before executing their main program.
+  extraWaitForEndpoints: {}
+
+  # Endpoints that all pods should signal upon termination.
+  # This is a workaround for k8s bad handling of jobs + "sidecars"
+  extraShutdownEndpoint: {}
+
+  hikari:
+    # Min number of connections to keep in the pool when the app is not being used
+    minIdle: 10
+    # Largest number of connections to keep in the pool at any one time.  Once max is hit, a client must wait on one to be returned to the pool
+    maxPool: 10
+    # Lifetime of each connection if it isn't terminated before this (in ms)
+    maxLifetime: 600000
+    # Time a connection has not been used before the pool consideres it idle and considers closing it (in ms)
+    idleTimeout: 600000 
+    # Time to wait while getting a connection from the pool (in ms)
+    connTimeout: 60000
+
+  # If not empty, the k8s namespace to deploy all resources to.
+  namespace: dev-exstream
+
+  ondemand:
+    enabled: true
+    # Used as the default docker image tag. Can be overridden by ondemand.image.tag
+    version: 24.4.0.4711
+
+  orchestration:
+    enabled: true
+    # Used as the default docker image tag. Can be overridden by orchestration.image.tag
+    version: 24.4.0.6391
+    customPlugins:
+      enabled: false
+      path: "plugins"
+      # When using embedded property as true, custom plugins should be embedded in the Orchestration image at /home/exstream/<global.orchestration.customPlugins.path>
+      embedded: false
+
+  eep: ##cxi integration or assured delivery
+    enabled: false
+    # Used as the default docker image tag. Can be overridden by eep.image.tag
+    version: 24.4.0.1538
+    ##This field is to clear the data before the specified days from eep database
+    #value should be provided in number of days
+    dataPeristencePeriod: 7
+    cleanup:
+      batchSize: 50000
+    
+  assuredDelivery:
+    enabled: false
+    schedule:
+      report: "*/15 * * * *" #expects a cron like */15 * * * *
+    consolidation:
+      ## This field is to configure wait period for a final external event in OT notifications channel report
+      ## After timeout, last received event for a flow-step will be shared with Orchestration 
+      ## Value must be provided in seconds
+      timeout: 7200  
+        
+  ei:
+    enabled: false
+    # Used as the default docker image tag. Can be overridden by ei.image.tag
+    version: 24.4.0.1675
+    cleanup:
+      batchSize: 50000
+
+  rationalization:
+    enabled: false
+    # Used as the default docker image tag. Can be overridden by rationalization.image.tag
+    version: 24.4.0.2280
+
+  squid:
+    # Used as the default docker image tag. Can be overridden by squid.image.tag
+    version: 24.4.0.64
+    enabled: false
+    port: 3128
+    # The service url of the ICAP service that routes traffic to the anti-virus service
+    # The service url should be formatted like
+    # icap://<url>:<port>/<service_name>    
+    icapServiceUrl: icap://exstreamecf-clamav-clamav.default.svc.cluster.local:1344/squidclamav
+    client_request_buffer_max_size: 150
+    
+  otds:
+    enabled: true
+    # The OTDS URL that ExstreamCE services should access directly.
+    # If OTDS is running on the same k8s cluster as Exstream, this usually points to the OTDS service,
+    # e.g. http://exstreamotds-otdsws/otds
+    # If not specified, this will default to the URL specified in externalFrontEnd.
+    externalBackEnd: http://experience-deployment-otdsws.dev-exstream:80/otds
+    # The OTDS URL that ExstreamCE services should pass to clients, such as on login redirects.
+    externalFrontEnd: https://dev-exstream.nednet.co.za:443/otds
+    oauth2:
+      clientId: dev-nedbankauth #nedbank#
+      clientSecret: h5hTwKFF0q7yfh9l4mkb06KBOANo513N
+
+  # Support for Istio virtual services for Exstream applications.
+  istio:
+    virtualService:
+      enabled: false
+      gateways: []
+      # ingress.hostname and ingress.context are used to populate the host and path in the virtualService.
+
+  ingress:
+    enabled: true
+    hostname: dev-exstream.nednet.co.za
+    #hostname: localhost
+    hostport: 80
+    # The className of the IngressClass to use. This is supported in k8s 1.18+. It will be ignored in lower versions.
+    # If className is not provided, it falls back to using defaultAnnotationsType. className=(defaultAnnotationsType==nginx)?nginx:""
+    # If className is provided and has an empty value, then Ingress objects will not receive a value for their ingressClassName. They will use the default IngressClass in the k8s cluster.
+    # If className is provided and has a non-empty value, then Ingress objects will have ingressClassName set to that value.
+    #className:
+    # Set a root path to the url
+    # For example "http://hostname/myContext/..."
+    context: ""
+    # Include default annotations for the given ingress type.
+    # Supported values: none, nginx, openshiftRoute
+    # This can be specified in global.ingress.defaultAnnotationsType, for all services, or for individual services like design.ingress.defaultAnnotationsType.
+    defaultAnnotationsType: nginx
+    # Specify ingress annotations.
+    # This can be specified in global.ingress.annotations, for all services, or for individual services like design.ingress.annotations.
+    annotations: {}
+
+    # If using AWS ALB ingress you might use annotations like the following
+    # annotations:
+    #   alb.ingress.kubernetes.io/certificate-arn: <cert_arn>,
+    #   alb.ingress.kubernetes.io/group.name: <group>,
+    #   alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]',
+    #   alb.ingress.kubernetes.io/scheme: internet-facing,
+    #   alb.ingress.kubernetes.io/subnets: '<subnets>',
+    #   alb.ingress.kubernetes.io/target-type: ip,
+    #   alb.ingress.kubernetes.io/ssl-redirect: '443'
+
+  ## Enable integration with prometheus
+#  prometheus:
+#    secretName: prometheus-auth
+#    secretKey: password
+
+
+  ## Enable tls on the ingress
+  tls:
+    enabled: true
+    # Specify a TLS certificate and key in PEM format to be used with the ingresses.
+    # Do not specify these when specifying a secretName.
+    #crt: ""
+    #key: ""
+    # The name of a pre-existing secret containing a tls.crt and tls.key for use with the ingresses.
+    # Do not specify this when specifying tls.crt and tls.key.
+    secretName: "dev-exstream-cert"
+
+  frontEnd:
+    # Set the protocol for URLs returned by ExstreamCE to ExstreamCE services. Can be http, https, or auto (which will set the value based on tls.enabled).
+    protocol: auto
+
+  ## Trust store stored by all services
+  trust:
+    custom:
+      enabled: false
+      source: ""
+      password:
+
+  ## For test purposes provision a database as part of the installation
+  exstreamdb:
+    dbType: SQLSERVER 
+    svcName: ""
+    svcPort: 8888
+
+  ## Design service database connection information
+  dasdb:
+    schema:
+      prefix: ""
+
+      ## Should the design service be responsible for managing the database schema?
+      autoManage:
+        enabled: false
+        username: exd_system
+        password: R@spb3rry123
+
+    ## Connection information to the design database
+    externalDb:
+      enabled: true
+      # The type of database.  Possible values: SQLSERVER | ORACLE | POSTGRES
+      dbType: SQLSERVER 
+      username: exd_system
+      password: R@spb3rry123
+      url: jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433;databaseName=ECM_OT;encrypt=true;trustServerCertificate=true
+      #url: jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433;user=sqldba-admin@nsnsqlmidev102;password={your_password_here};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.a51a56ea8c79.database.windows.net;loginTimeout=30;
+      #url: "jdbc:sqlserver://localhost:1433;databaseName=exstream"
+      #url: "jdbc:oracle:thin:@//localhost:1521/XE"
+      ## System tenant schema
+      schema: exd_system
+      
+
+      # usernameSuffix will be concatenated to the end of all usernames. For example Azure Postgres 
+      # needs @hostname applied to the end of the username and in this case set usernameSuffix to @hostname.
+      usernameSuffix: null
+    vault:
+      # Vault database secrets engine settings for design service related DB connection
+      enginerolepath:
+        # combined Vault secret engine and role path information to be used for the system tenant
+        system:
+        # combined Vault secret engine and role path information to be used for schema management operations
+        schema:
+
+  ## Orchestration service database connection information
+  orcdb:
+    schema:
+      prefix: ""
+
+      ## Should the orchestration service be responsible for managing the database schema?
+      autoManage:
+        enabled: false
+        username: exo_system
+        password: R@spb3rry123
+
+    ## Connection information to the orchestration database
+    externalDb:
+      enabled: true
+      # The type of database.  Possible values: SQLSERVER | ORACLE | POSTGRES
+      dbType: SQLSERVER 
+      username: exo_system
+      password: R@spb3rry123
+      url: jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433;databaseName=ECM_OT;encrypt=true;trustServerCertificate=true
+      #url: "jdbc:sqlserver://localhost:1433;databaseName=exstream"
+      #url: "jdbc:oracle:thin:@//localhost:1521/XE"
+      ## System tenant schema
+      schema: exo_system
+
+      # usernameSuffix will be concatenated to the end of all usernames. For example Azure Postgres 
+      # needs @hostname applied to the end of the username and in this case set usernameSuffix to @hostname.
+      usernameSuffix: null
+    vault:
+      # Vault database secrets engine settings for orchestration service related DB connection
+      enginerolepath:
+        # combined Vault secret engine and role path information to be used for the system tenant
+        system:
+        # combined Vault secret engine and role path information to be used for schema management operations
+        schema:
+  ## Empower service database connection information
+  empowerdb:
+    schema:
+      prefix: "dev"
+      ## Should the empower service be responsible for managing the database schema?
+      autoManage:
+        enabled: true
+        username: exe_system
+        password: R@spb3rry123
+      shared:
+        name: shared_schema
+        username: someusername
+        password: somepassword
+      system:
+        name: system_schema
+        username: someusername
+        password: somepassword
+    externalDb:
+      enabled: true
+      # The type of database.  Possible values: SQLSERVER | ORACLE | POSTGRES
+      dbType: SQLSERVER 
+      url: jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433;databaseName=ECM_OT;encrypt=true;trustServerCertificate=true
+      #url: "jdbc:sqlserver://localhost:1433;databaseName=exstream"
+      #url: "jdbc:oracle:thin:@//localhost:1521/XE"
+      schema: exe_system
+  
+      # usernameSuffix will be concatenated to the end of all usernames. For example Azure Postgres 
+      # needs @hostname applied to the end of the username and in this case set usernameSuffix to @hostname.
+      usernameSuffix: null
+    vault:
+      # Vault database secrets engine settings for empower service related DB connection
+      enginerolepath:
+        # combined Vault secret engine and role path information to be used for the system tenant
+        system:
+        # combined Vault secret engine and role path information to be used for schema management operations
+        schema:
+        # combined Vault secret engine and role path information to be used for the shared system tenant
+        shared:
+
+  ## Rationalization service database connection information
+  rationalizationdb:
+    schema:
+      prefix: ""
+
+      ## Should the Rationalization service be responsible for managing the database schema?
+      autoManage:
+        enabled: true
+        username: someusername
+        password: somepassword
+
+    ## Connection information to the Rationalization database
+    externalDb:
+      # The type of database.  Possible values: SQLSERVER | ORACLE | POSTGRES
+      enabled: true
+      dbType: SQLSERVER 
+      username: someusername
+      password: somepassword
+      url: jdbc:sqlserver://nsnsqlmidev102.a51a56ea8c79.database.windows.net:1433;databaseName=ECM_OT;encrypt=true;trustServerCertificate=true;loginTimeout=30
+      #url: "jdbc:sqlserver://localhost:1433;databaseName=exstream"
+      #url: "jdbc:oracle:thin:@//localhost:1521/XE"
+      ## System tenant schema
+      schema: exr_system
+
+      # usernameSuffix will be concatenated to the end of all usernames. For example Azure Postgres 
+      # needs @hostname applied to the end of the username and in this case set usernameSuffix to @hostname.
+      usernameSuffix: null
+
+  ## Experience Insights (EI) service database connection information
+  eidb:
+    schema:
+      prefix: ""
+
+      ## Should the EI service be responsible for managing the database schema?
+      autoManage:
+        enabled: false
+        username: 
+        password: 
+
+    ## Connection information to the EI database
+    externalDb:
+      # The type of database.  Possible values: SQLSERVER | ORACLE | POSTGRES
+      dbType: SQLSERVER 
+      username: 
+      password: 
+      url: jdbc:postgresql://localhost:5432/exstream
+      #url: "jdbc:sqlserver://localhost:1433;databaseName=exstream"
+      #url: "jdbc:oracle:thin:@//localhost:1521/XE"
+      ## System tenant schema
+      schema: exi_system
+
+      # usernameSuffix will be concatenated to the end of all usernames. For example Azure Postgres 
+      # needs @hostname applied to the end of the username and in this case set usernameSuffix to @hostname.
+      usernameSuffix: null
+
+  ## External events puller database connection information
+  eepdb:
+    schema:
+      prefix: ""
+
+      ## Should the EEP service be responsible for managing the database schema?
+      autoManage:
+        enabled: false
+        username: 
+        password: 
+
+    ## Connection information to the EEP database
+    externalDb:
+      # The type of database.  Possible values: SQLSERVER | ORACLE | POSTGRES
+      dbType: SQLSERVER 
+      username: 
+      password: 
+      url: jdbc:postgresql://localhost:5432/exstream
+      #url: "jdbc:sqlserver://localhost:1433;databaseName=exstream"
+      #url: "jdbc:oracle:thin:@//localhost:1521/XE"
+      ## System tenant schema
+      schema: eep_system
+
+      # usernameSuffix will be concatenated to the end of all usernames. For example Azure Postgres 
+      # needs @hostname applied to the end of the username and in this case set usernameSuffix to @hostname.
+      usernameSuffix: null
+
+  ## Storage for the batch and orchestration services
+  storage:
+    tmp:
+      path: /tmp
+    shared:
+      # Shared Storage default type is NFS. It also accepts s3 value. In case of using s3 type, you should fill the s3 connection details parameters.
+      # You can optionally specify storage for ondemand and batch, where they will run the engine and cache engines and resources.  Otherwise, a default
+      # ephemeral storage volume will be mounted and used.
+      type: nfs
+      
+      # S3 Shared Storage connection details.
+      s3:
+        # When using static credentials, accesskey and secretkey should be definied here. In case of using Vault this parameters won't be used, so can be left bkank.
+        accesskey: ""
+        secretkey: ""
+        # endpoint is not required when using AWS S3 buckets.
+        endpoint: 
+        region: ""
+        bucket: ""    
+        # forcePathStyle is not required when using AWS S3 buckets. But it's required when using LocalStack.
+        forcepathstyle: false
+        # when uploading streams, we can use asynchrnous upload methods. Not working on some S3 implementations like IBM S3 storage.
+        asynchronousUpload: true
+        numRuns: 19
+        vault:
+          # If using Vault, enabled attribute should be set to true.
+          enabled: false
+          # If using static credentials in Vault, you should add the following Vault secret: exstream/common/storage/s3 with secret attributes: accessKey, secretAccessKey
+          # If using a Vault engineRolePath, you should define the engineRolePath
+          enginerolepath: ""
+
+      # Should the chart create a pvc for shared storage?  In most cases this should be true but there are some cases 
+      # where it is helpful to create the PVC before installing.  If creating this on your own it must be called
+      # .Release.Name-shared-storage-pvc 
+      pvc:
+        enabled: false#nedbank#
+
+      className: azureblob-fuse-premium
+      userId: 5001
+      groupId: 5001
+      fsGroup:
+      # example: umask: "0022"
+      umask:
+      size: 10Gi
+      local:
+        enabled: false
+        path: "/c/ExstreamOrcRoot"
+    
+    memory:
+      sizeLimit: 64Mi
+
+
+  ## RabbitMQ queue information
+  rabbitmq: 
+    # The hostname for the rabbitmq service.  Example: exstream-rabbitmq.default.svc
+    host: experience-deployment-rabbitmq-headless.dev-exstream.svc.cluster.local
+    #host: experience-deployment-rabbitmq.svc.cluster.local
+    # The port for the rabbitmq service. Defaults to 5672.
+    port: 5672
+    # Optional virtual host to use in the rabbitmq service.
+    vhost: 
+    # Credentials used by Exstream services to authenticate to rabbit service, and by a system admin to access the rabbit administrative console.
+    username: "admin"
+    password: "$Exstream!"
+    # Specify a common prefix for all rabbitmq queues used by ExstreamCE.
+    queue:
+      namePrefix: exstream
+    # TLS configuration for rabbitmq.
+    #   If tls.enabled is true, ampqs will be used.
+    #   If tls.useClientCertificate is true, the pem files specified by tls.cert and tls.key will be used with amqps
+    #   Use tls.authMechanism to specify whether to use plain or external authentication when using a client certificate.
+    tls:
+      enabled: false
+      useClientCertificate: false
+      authMechanism: plain
+    useQuorumQueues: true
+    # The largest frame size that the RabbitMQ clients will use for the connection (https://www.rabbitmq.com/amqp-0-9-1-reference).
+    frameMax: 131072
+
+  ot2:
+    enabled: false
+    ets:
+      backend:
+        url: http://xx.xx.xx.xx:8080
+    css:
+      backend:
+        url: https://contentservice
+    cms:
+      backend:
+        url: https://cms
+    utils:
+      # Used as the default docker image tag. Can be overridden by bootstrap-ot2-job.image.tag
+      version: 24.4.0.225
+
+  schema:
+    upgrade:
+      job:
+        enabled: true
+
+  # The service type for all ExstreamCE services.  This can be overridden for individual charts.
+  svc:
+    type: ClusterIP
+
+  ## topologySpreadConstraints is supported in kubernetes 1.19+. It can be specified per Exstream chart, or globally to all Exstream charts.
+  ## See k8s topology documentation here: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  #topologySpreadConstraints:
+  # # The skew is the maximum difference between numbers of pods in selected nodes.
+  # # Must be > 0.  A value of 1 means that no selected node will have more than 1 pod more than another node (ie, best possible balance).
+  #- maxSkew: 1
+  #  # Be sure to select a label that is used to distinguish k8s nodes
+  #  topologyKey: kubernetes.io/hostname
+  #  # If topology specs cannot be honored for a new pod, choose ScheduleAnyway or DoNotSchedule
+  #  whenUnsatisfiable: ScheduleAnyway
+  #  # Automatically added by each Exstream chart according to the Release.Name and Chart.Name
+  #  - labelSelector.matchLabels.app: exstream-design
+    
+  # Use vault to store secrets
+  vault:
+    url: #https://vault:8200
+    # Authentication path in vault.  Default is 'kubernetes'
+    authenticationPath:
+    # The secret engine to use in vault.  Default is 'secret'
+    secretEngine:
+    # The base path to use for secrets.  For example if your secrets are at
+    # /secret/my/path/exstream/.. then secretBasePath would be "my/path"
+    secretBasePath:
+    # Vault namespace. To which installation should connect.
+    # Supported only for enterprise Vault instances.
+    namespace: 
+    # Token of the account, this will be used in case of Auth mode is of "token".
+    token:
+
+  # Should be true in case of deploying in private Cloud. False otherwise.
+  privateCloud: false
+
+  # Azure
+  azure:
+    # key vault
+    keyVault:
+      # enable azure key vault
+      enabled: false
+      # vault url, required if enabled
+      vaultUrl:
+      # secret Base Path
+      secretBasePath:
+      # release
+      release:
+
+  # Add extra labels to all resources globally
+  extraResourceLabels: {}   
+  
+  # Add extra pod match labels to all deployments, services, and pods globally
+  extraPodMatchLabels: {}   
+
+  # Add extra annotations to all resources globally
+  extraResourceAnnotations: {}
+
+  #
+  # By type (Chart.kind) options for adding additional labels and annotations
+  # These values will override the values defined in the global.extraResourceLabels, and global.extraResourceAnnotations
+  # if there is a key overlap
+  #
+  # resourceType is the camel case of Chart.kind for the resource (ex. configMap, deployment, persistentVolumeClaim, etc.)
+# resourceType: 
+#   # Add extra labels to all resourceType resources
+#   extraResourceLabels: {}
+#   # Add extra annotations to all resourceType resources
+#   extraResourceAnnotations: {}
+
+  #
+  # By sub chart options for adding additional labels and annotations.
+  # These values will override the values defined in the global.extraResourceLabels, global.extraPodMatchLabels, global.extraResourceAnnotations,
+  # resourceType.global.extraResourceLabels and resourceType.global.extraResourceAnnotations if there is a key overlap
+  #
+  # subchart is the sub chart identifier (ex. batch, design, empower, etc)
+  # resourceType is the camel case of Chart.kind for the resource (ex. configMap, deployment, persistentVolumeClaim, etc.)
+# subchart: 
+#   # Add extra labels to all resources for the specified subchart
+#   extraResourceLabels: {}
+#   # Add extra match labels to all deployments and services for the specified subchart
+#   extraPodMatchLabels: {}
+#   # Add extra annotations to all resources for the specified subchart
+#   extraResourceAnnotations: {}
+
+  #
+  # By sub chart by type (Chart.kind) options for adding additional labels and annotations.
+  # These values will override the values defined in the global.extraResourceLabels, global.extraResourceAnnotations,
+  # resourceType.global.extraResourceLabels, resourceType.global.extraResourceAnnotations, subchart.extraResourceLabels and
+  # subchart.extraResourceAnnotations if there is a key overlap
+  #
+  # subchart is the sub chart identifier (ex. batch, design, empower, etc.)
+  # resourceType is the camel case of Chart.kind for the resource (ex. configMap, deployment, persistentVolumeClaim, etc.)
+# subchart:
+#   resourceType: 
+#     # Add extra labels to all resourceType resources for the specified subchart
+#     extraResourceLabels: {}
+#     # Add extra annotations to all resourceType resources for the specified subchart
+#     extraResourceAnnotations: {}
+
+# Sub charts
+batch:
+  replicaCount: 1
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  schedule:
+    cleanup: "20 * * * *" #expects a cron like */60 * * * *
+    maxAgeMillis: "604800000" # Max age, in millis, before a batch job folder is cleaned. Defaults to 1 week.
+  # Additional environment variables. For example, can specify NODE_OPTIONS to add cli options to node.
+  extraEnvironmentVars: {}
+  #    sampleVariable: value
+  extraSecretEnvironmentVars: []
+#    - envName: SAMPLE_ENV_NAME
+#      secretName: sample-secret-name
+#      secretKey: sample-secret-key
+  # Add extra properties to the batch deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the batch deployment
+  extraDeploymentProperties: {}
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    batch: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "10Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "5Gi"
+    cleanupCron: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+  # The service account for this service
+  serviceAccountName: &serviceAccount "exstream-sa"
+  # If you use an s3 shared storage type, you may optionally specify storage for batch, including volume and volumeMount
+  # fields for the batch deployment.  Otherwise, a default emptyDir volume will be mounted and used.
+  storage: {}
+    # volume: |
+    #   - name: docgen-work
+    #     emptyDir:
+    #       sizeLimit: 1Gi
+    # volumeMount: |
+    #   - mountPath: /batch
+    #     name: docgen-work
+    # mountPath: /batch
+
+  # Number of seconds to keep a terminating batch pod alive while it finishes an Engine run it began before being terminated.
+  terminationGracePeriodSeconds: 28800
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+design:
+  replicaCount: 2
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Set allowed origins for this service.  Example: http://127.0.0.1:3000,http://mycompany.domain.net:4000
+  allowedOrigins: ""
+  local: false
+  extraEnvironmentVars: {}
+  #  sampleVariable: dev
+  extraSecretEnvironmentVars: []
+  #  - envName: DEV_ENV_NAME
+  #      secretName: sample-secret-name
+  #      secretKey: sample-secret-key
+  # Add extra properties to the design deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the design deployment
+  extraDeploymentProperties: {}
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    design: {}
+      # limits:
+      #   cpu: "1500m"
+      #   memory: "3Gi"
+      # requests:
+      #   cpu: "750m"
+      #   memory: "1.5Gi"
+    schema: {}
+      # limits:
+      #   cpu: "1500m"
+      #   memory: "3Gi"
+      # requests:
+      #   cpu: "750m"
+      #   memory: "1.5Gi"
+    upgradeJob: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+  # Same-site setting for all cookies from this service. Possible values: Unset, None, Lax, Strict.
+  sameSiteCookie: None
+  # Partitioned setting for all cookies from this service. Possible values: true, false
+  partitionedCookie: true
+
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+empower:
+  replicaCount: 1
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Set allowed origins for this service.  Example: http://127.0.0.1:3000,http://mycompany.domain.net:4000
+  allowedOrigins: ""
+  # Same-site setting for all cookies from this service. Possible values: Unset, None, Lax, Strict.
+  sameSiteCookie: None
+  # Partitioned setting for all cookies from this service. Possible values: true, false
+  partitionedCookie: true
+  extraEnvironmentVars: {}
+#    sampleVariable: value
+  extraSecretEnvironmentVars: []
+#    - envName: SAMPLE_ENV_NAME
+#      secretName: sample-secret-name
+#      secretKey: sample-secret-key
+
+  # Add extra properties to the empower deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the empower deployment
+  extraDeploymentProperties: {}
+
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+  # Turn audit logs on or off
+  audit:
+    enabled: true
+  # DB Connection pool settings per tenant
+  hikari:
+    # Min number of connections to keep in the pool when the app is not being used
+    minIdle: 10
+    # Largest number of connections to keep in the pool at any one time.  Once max is hit, a client must wait on one to be returned to the pool
+    maxPool: 10
+    # Lifetime of each connection if it isn't terminated before this (in ms)
+    maxLifetime: 600000
+    # Time a connection has not been used before the pool consideres it idle and considers closing it (in ms)
+    idleTimeout: 600000 
+    # Time to wait while getting a connection from the pool (in ms)
+    connTimeout: 60000
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    empower: {}
+      # limits:
+      #   cpu: "2000m"
+      #   memory: "8Gi"
+      # requests:
+      #   cpu: "1000m"
+      #   memory: "4Gi"
+    schema: {}
+      # limits:
+      #   cpu: "2000m"
+      #   memory: "8Gi"
+      # requests:
+      #   cpu: "1000m"
+      #   memory: "4Gi"
+    editorUploadJob: {}
+      # limits:
+      #   cpu: "2000m"
+      #   memory: "8Gi"
+      # requests:
+      #   cpu: "1000m"
+      #   memory: "4Gi"
+  spring:
+    # When enabled=false, traces log to the console. Comment or set to true to send to zipkin.
+    zipkinEnabled: false
+    zipkinBaseUrl: http://zipkin:9411/
+    # Set to 1.0 to sample and send all calls to zipkin. Set to 0.0 to send none.
+    sleuthSamplerProbability: 0.0
+
+
+ondemand:
+  replicaCount: 1
+
+  # Timeout for an ondemand request.
+  engineTimeoutMillis:
+
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Additional environment variables. For example, can specify NODE_OPTIONS to add cli options to node.
+  extraEnvironmentVars: {}
+#    sampleVariable: value
+  extraSecretEnvironmentVars: []
+#    - envName: SAMPLE_ENV_NAME
+#      secretName: sample-secret-name
+#      secretKey: sample-secret-key
+  
+  # Add extra properties to the ondemand deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the ondemand deployment
+  extraDeploymentProperties: {}
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    ondemand: {}
+      # limits:
+      #   cpu: "3000m"
+      #   memory: "10Gi"
+      # requests:
+      #   cpu: "1500m"
+      #   memory: "5Gi"
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # If you use an s3 shared storage type, you may optionally specify storage for ondemand, including volume and volumeMount
+  # fields for the ondemand deployment.  Otherwise, a default emptyDir volume will be mounted and used.
+  storage: {}
+    # volume: |
+    #   - name: docgen-work
+    #     emptyDir:
+    #       sizeLimit: 1Gi
+    # volumeMount: |
+    #   - mountPath: /ondemand
+    #     name: docgen-work
+    # mountPath: /ondemand
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+orchestration:
+  replicaCount: 2
+  gracefulTerminationTimeout: 28800
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Set allowed origins for this service.  Example: http://127.0.0.1:3000,http://mycompany.domain.net:4000
+  allowedOrigins: ""
+  extraEnvironmentVars: {}
+#    sampleVariable: value
+  extraSecretEnvironmentVars: []
+#    - envName: SAMPLE_ENV_NAME
+#      secretName: sample-secret-name
+#      secretKey: sample-secret-key
+
+  # Add extra properties to the orchestration deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the orchestration deployment
+  extraDeploymentProperties: {}
+
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    orchestration: {}
+      # limits:
+      #   cpu: "3000m"
+      #   memory: "10Gi"
+      # requests:
+      #   cpu: "1500m"
+      #   memory: "5Gi"
+    schema: {}
+      # limits:
+      #   cpu: "3000m"
+      #   memory: "10Gi"
+      # requests:
+      #   cpu: "1500m"
+      #   memory: "5Gi"
+    cleanupCron: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+  schedule:
+    cleanup: "*/60 * * * *" #expects a cron like */60 * * * *  
+    # section for system cron jobs which do housekeeping of jobs
+    sysCronJob:
+      # set to true to enable these system cron jobs for housekeeping of jobs
+      init: false
+      # if true, when upgrading, default configuration will overwrite any changed values
+      overwrite: true
+      # cron job to mark for deletion finished jobs
+      markDeleted:
+        # true to enable, false to disable
+        enabled: true
+        name: sys_markJobsForDeletion
+        cronExpression: "0 23 * * SAT"
+        # minimum number of days which must have elapsed since the end of the job for the job to be marked for deletion
+        timeSinceEndOfJob: 30
+      # cron job to cancel jobs which have not completed  
+      cancel:
+        # true to enable, false to disable 
+        enabled: true
+        name: sys_cancelJobs
+        cronExpression: "0 20 * * SAT"
+        # minimum number of days which must have elapsed since the start of the job for the job to be canceled
+        timeSinceStartOfJob: 14
+      # cron job to wipe deleted jobs  
+      wipe:
+        # true to enable, false to disable 
+        enabled: true
+        name: sys_wipeJobs
+        cronExpression: "0 23 * * SUN" 
+      # cron job to wipe sorting assets  
+      wipeSortingAssets:
+        # true to enable, false to disable 
+        enabled: true
+        name: sys_wipeSortingAssets
+        cronExpression: "0 22 * * SUN" 
+        # minimum number of days which must have elapsed since the creation of the sorting asset for the sorting asset to be wiped
+        timeSinceCreated: 30
+      # cron job to expire sorting assets  
+      expireSortingAssets:
+        # true to enable, false to disable, note it is disabled by default, this cron job is related to the previous one
+        enabled: false
+        name: sys_expireSortingAssets
+        cronExpression: "0 22 * * SAT" 
+        # minimum number of days which must have elapsed since the creation of the sorting asset for the sorting asset to be expired
+        timeSinceCreated: 14
+
+  ## (AWS) SQS information
+  sqs:
+    enabled: false
+    keyid: ""
+    secretkey: ""
+    # AWS region, for example: eu-central-1
+    region: ""
+    queueName: ""
+    endpoint: ""
+
+  ## Azure queue information
+  azure:
+    enabled: false
+    # The storage account for the queue
+    storageaccount: ""
+    # The access key for the queue
+    accesskey: ""
+    # The name of the queue
+    queue: ""
+    
+  ## (GCP) GCS information
+  gcs:
+    enabled: false
+    secretkey: ""
+    projectid: ""   
+    subscriptionid: ""
+    
+  ## max file upload size multipart
+  multiPartMaxFileSize: "2GB"
+  
+  ## transactions usage data deletion days
+  transactionsDeletionDays: 365
+  
+  ## Allow import of flow scripts. If allowing, strict mode will be implicitly enforced on all processed scripts
+  flowScriptsAllowImport: true
+
+  ## Max number of jobs to be fetched in one query when deleting jobs
+  maxJobsToFetch: 50000
+
+  ## Number of fetched jobs to send to deletion at the same time
+  maxJobsToDelete: 500  
+
+  ## Max number of parameters in SQL query
+  maxSqlQueryParameters: 2000
+
+  ## Max number of jobs when deleting tracing resources in the same query
+  maxDeleteJobTracingSize: 10
+  tempFilenameSuffix: ".tmp"
+  useTempFile: true
+  
+ei:
+  hikari:
+    # Min number of connections to keep in the pool when the app is not being used
+    minIdle: 3
+    # Largest number of connections to keep in the pool at any one time.  Once max is hit, a client must wait on one to be returned to the pool
+    maxPool: 3
+  replicaCount: 
+    api: 1
+    cme: 1
+    ci: 1
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Set allowed origins for this service. Example: http://127.0.0.1:3000,http://mycompany.domain.net:4000
+  allowedOrigins: ""
+  schedule:
+    event: "*/10 * * * *" #expects a cron like */10 * * * *
+    cleanup: "*/50 * * * *" #expects a cron like */50 * * * *
+  extraEnvironmentVars: {}  
+  #  sampleVariable: value
+  extraSecretEnvironmentVars: []
+  #  - envName: SAMPLE_ENV_NAME
+  #    secretName: sample-secret-name
+  #    secretKey: sample-secret-key 
+  # Add extra properties to the config-api deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the config-api deployment
+  extraDeploymentProperties: {}  
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    configApi: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    customMedadataExtractor: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    covisintIntegrator: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    schema: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    upgradeJob: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    cron: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    cleanupCron: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+rationalization:
+  replicaCount: 1
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Set allowed origins for this service.  Example: http://127.0.0.1:3000,http://mycompany.domain.net:4000
+  allowedOrigins: ""
+  extraEnvironmentVars: {}
+  #  sampleVariable: value
+  extraSecretEnvironmentVars: []
+  #  - envName: SAMPLE_ENV_NAME
+  #    secretName: sample-secret-name
+  #    secretKey: sample-secret-key 
+  # Add extra properties to the rationalization deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the rationalization deployment
+  extraDeploymentProperties: {}
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    rationalizationApi: {}
+      # limits:
+      #   cpu: "2000m"
+      #   memory: "4Gi"
+      # requests:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+    schema: {}
+      # limits:
+      #   cpu: "2000m"
+      #   memory: "4Gi"
+      # requests:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+    rationalizationJobs: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+  
+eep:
+  replicaCount: 1
+  # Add prometheus.io/scrape annotation to the service
+  metrics: false
+  # Set allowed origins for this service. Example: http://127.0.0.1:3000,http://mycompany.domain.net:4000
+  allowedOrigins: ""
+  schedule:
+    event: "*/15 * * * *" #expects a cron like */10 * * * *
+    cleanup: "*/60 * * * *" #expects a cron like */50 * * * *
+  extraEnvironmentVars: {}  
+  #  sampleVariable: value
+  extraSecretEnvironmentVars: []
+  #  - envName: SAMPLE_ENV_NAME
+  #    secretName: sample-secret-name
+  #    secretKey: sample-secret-key 
+  # Add extra properties to the EEP deployment container
+  extraContainerProperties: {}
+  # Add extra properties to the EEP deployment
+  extraDeploymentProperties: {}  
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    eep: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    schema: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+    cron: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "1Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "0.5Gi"
+    cleanupCron: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "1Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "0.5Gi"
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+squid:
+  replicaCount: 1
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    squid: {}
+      # limits:
+      #   cpu: "3000m"
+      #   memory: "6Gi"
+      # requests:
+      #   cpu: "1000m"
+      #   memory: "1500Mi"
+
+## Upload a default engine as part of the install
+upload-included-engine:
+  # Used as the default docker image tag. Can be overridden by upload-included-engine.image.tag
+  version: 24.4.0.4711
+  extraEnvironmentVars: {}
+#    sampleVariable: value
+  extraSecretEnvironmentVars: []
+#    - envName: SAMPLE_ENV_NAME
+#      secretName: sample-secret-name
+#      secretKey: sample-secret-key
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    uploadJob: {}
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+  # The service account for this service
+  serviceAccountName: *serviceAccount
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole: 
+
+## Provide a key to encrypt secret information such as db credentials
+encryption:
+  ## Which key should be used to encrypt
+  ## for example key1
+  defaultKey:  key1
+  ## Available keys
+  keys:
+    key1: pJQgLbU8SVUMhFxEml4okanP2cQ9WEbaKTCMa+9AzSY=
+
+##########################
+    
+bootstrap:
+  enabled: true
+  activeDeadlineSeconds: 360
+  config:
+# Customer Specific BootStrap 
+   # The otds admin user/password used when creating otds resources
+    otdsAdmin:
+      username: admin
+      password: $Exstream!
+
+    # should the bootstrap create the oauth clients in otds?
+    createOauthClients: false
+
+    # should bootstrap create schemas for existing tenants in new services?
+    fixPartialTenants: false
+
+    tenants:
+      system:
+        otds:
+          # Exstream admin user used to create exstream resources 
+          exstreamAdmin:
+            username: "admin"
+            password: "$Exstream!"
+
+          # Otds partitions to create
+          partitions:
+            exstream.role:
+
+              #Groups in the partition
+              groups: 
+              - name: tenantadmins
+                members: [ otadmin@otds.admin ]
+
+              #users in the partition
+              users:
+              - username: tenantadmin
+                password: Exstream1!
+                membership: [ tenantadmins@exstream.role ]
+
+          authHandlers:
+            "http.negotiate":
+              status: false
+
+        # Design service configuration
+        das:
+
+          # Domains to create
+          domains:
+            - id: system
+              production: false
+
+              # Mappings between DAS roles and OTDS groups
+              roleMappings: 
+                - role: superadmin
+                  groups: [ tenantadmins@exstream.role ]
+
+          # Das roles
+          roles:
+            - name: superadmin
+              appPermissions: [ COMM_DESIGNER, 
+                                CONTENT_AUTHOR, 
+                                DATA_MAPPER, 
+                                DESIGNER_ASSET_MANAGER, 
+                                ORCHESTRATOR, 
+                                MONITOR, 
+                                MONITOR_JOB_FILES, 
+                                ORCHESTRATION_MANAGEMENT, 
+                                MIGRATION_MANAGEMENT, 
+                                EDIT_CATEGORIES ]
+              permissions: 
+              - permissions: [ ALL ]
+                types: [ all ]
+
+      dev-exstream:
+        otds:
+          admin:
+            username: admin
+            password: $Exstream!
+
+          exstreamAdmin:
+            username: tenantadmin@exstream.role
+            password: Exstream1!
+
+          resources: 
+           - name: SPS Resource for non-prod License
+             description: SPS Resource for DocGen non-prod Transactional Licenses
+             licenses:
+               - username: tenantadmin
+                 partition: exstream.role
+                 prodLicense: false
+                 name: Non Production License Key
+                 #file: $(Build.SourceDirectory)/path/to/EXSTREAMxNON_PRODUCTION.lic
+         #   - name: SPS Resource for prod License
+         #     description: SPS Resource for DocGen prod Transactional License
+         #     licenses:
+         #     - username: 
+         #       partition: exstream.role
+         #       prodLicense: true
+         #       name: Production License Key
+    #    #        file: <licensefile>
+          partitions:
+            exstream.role:
+              groups:
+                - name: tenantadmins
+                - name: tenantusers
+                - name: reviewers
+                - name: browsers
+                - name: authors
+                - name: designers
+                - name: empoweradmins
+                - name: empowerintegrators
+                - name: empowereditors
+
+              clients:
+                - clientId: ExstreamEmpowerAdmin
+                  clientSecret: fes7tp8RoKQU7i1jHsDIL7u8J24f5Bk6
+                  membership: [ empoweradmins@exstream.role ]
+
+              users:
+                - username: orchestrationadmin
+                  password: Exstream1!
+                  membership: [ tenantadmins@exstream.role ]
+                - username: tenantbrowser
+                  password: Exstream1!
+                  membership: [ browsers@exstream.role ]
+                - username: tenantadmin
+                  password: Exstream1!
+                  membership: [ tenantadmins@exstream.role, empoweradmins@exstream.role ]
+                - username: tenantuser
+                  password: Exstream1!
+                  membership: [ tenantusers@exstream.role ]
+                - username: review
+                  password: Exstream1!
+                  membership: [ reviewers@exstream.role ]
+                - username: cce
+                  password: Exstream1!
+                  membership: [ tenantadmins@exstream.role, tenantusers@exstream.role ]
+                - username: designer
+                  password: Exstream1!
+                  membership: [ designers@exstream.role ]
+                - username: author
+                  password: Exstream1!
+                  membership: [ authors@exstream.role ]
+                - username: empoweradmin
+                  password: Exstream1!
+                  membership: [ empoweradmins@exstream.role ]
+                - username: empowerintegrator
+                  password: Exstream1!
+                  membership: [ empowerintegrators@exstream.role ]
+                - username: empowereditor
+                  password: Exstream1!
+                  membership: [ empowereditors@exstream.role ]
+        das:
+          databaseInfo:
+            schema: exd_dev_exstream
+            username: exd_dev
+            password: R@spb3rry123
+
+          domains:
+            - id: dev-SA
+              production: false
+              roleMappings: 
+                - role: superadmin
+                  groups: [ tenantadmins@exstream.role ]
+                - role: bcauser
+                  groups: [ authors@exstream.role ]
+                - role: commdesigner
+                  groups: [ designers@exstream.role ]
+                - role: tenantuser
+                  groups: [ tenantusers@exstream.role ]
+                - role: tenantadmin
+                  groups: [ tenantadmins@exstream.role ]
+                - role: reviewer
+                  groups: [ reviewers@exstream.role ]
+                - role: readonly
+                         
+                     
+                  groups: [ empoweradmins@exstream.role, empowereditors@exstream.role ]
+                                                  
+                     
+            - id: dev-nonSA
+              production: false
+              roleMappings: 
+                - role: superadmin
+                  groups: [ tenantadmins@exstream.role ]
+                - role: bcauser
+                  groups: [ authors@exstream.role ]
+                - role: commdesigner
+                  groups: [ designers@exstream.role ]
+                - role: tenantuser
+                  groups: [ tenantusers@exstream.role ]
+                - role: tenantadmin
+                  groups: [ tenantadmins@exstream.role ]
+                - role: reviewer
+                  groups: [ reviewers@exstream.role ]
+                - role: readonly
+                  groups: [ empoweradmins@exstream.role, empowereditors@exstream.role ]
+          roles:
+            - name: superadmin
+              appPermissions: [ COMM_DESIGNER, CONTENT_AUTHOR, 
+                                DATA_MAPPER, DESIGNER_ASSET_MANAGER, 
+                                ORCHESTRATOR, MONITOR, MONITOR_JOB_FILES, 
+                                ORCHESTRATION_MANAGEMENT, MIGRATION_MANAGEMENT, EDIT_CATEGORIES ]
+                 
+              permissions: 
+              - permissions: [ ALL ]
+                types: [ all ]
+            - name: bcauser
+              appPermissions: [ CONTENT_AUTHOR ]
+              permissions: 
+              - permissions: [ CREATE, READ, WRITE, DELETE ]
+                types: [ exstrdocument, exstrpage, exstrcomponentobj, exstremail, 
+                         exstrvariablebase, exstrgraphicalmessage, exstrtextmessage, 
+                         exstrparagraph, exstrparagraphsection, exstrhtml5, image, pdf, 
+                         samplefile, resourcepack, exstrpackage, exstrdatasource, versionedtemplate, 
+                         enginerundef, documentdefinition, exstrapplication, exstrbarcode, exstrpapertype, exstrdesignlayout ]
+              - name: commdesigner
+              appPermissions: [ COMM_DESIGNER ]
+              permissions:
+              - permissions: [ CREATE, READ, WRITE ]
+                types: [ exstrdocument, exstrpage, exstrcomponentobj, exstremail, exstrvariablebase, 
+                        exstrgraphicalmessage, exstrtextmessage, exstrparagraph, exstrparagraphsection, 
+                        exstrhtml5, documentdefinition, image, pdf, resourcepack, exstrpackage, exstrdatasource,
+                        versionedtemplate, enginerundef, samplefile, exstrapplication, exstrbarcode, exstrpapertype, exstrdesignlayout ]
+                     
+            - name: reviewer
+              appPermissions: [ CONTENT_AUTHOR,COMM_DESIGNER,ORCHESTRATOR ]
+              permissions: 
+              - permissions: [ APPROVE ]
+                types: [ all ]
+            - name: tenantadmin
+              appPermissions: [ ALL  ]
+              permissions: 
+              - permissions: [ ALL ]
+                types: [ all ]
+            - name: tenantuser
+              appPermissions: [ ALL ]
+              permissions: 
+              - permissions: [ CREATE, READ, WRITE, DELETE ]
+                types: [ all ]
+            - name: readonly
+              appPermissions: [ ]
+              permissions: 
+              - permissions: [ READ ]
+                types: [ all ]
+
+        # Provide tenant username/schema/password if applicable
+        orchestration:
+          databaseInfo:
+            schema: exo_dev_exstream
+            username: exo_dev
+            password: R@spb3rry123
+
+        # Provide tenant username/schema/password if applicable
+        empower:
+        #   databaseInfo:
+        #     schema: exe_test
+        #     username: exe_test
+        #     password: Exstream1!
+
+        # Provide tenant username/schema/password if applicable
+        # ei:
+        #   databaseInfo:
+        #     schema: exi_test
+        #     username: exi_test
+        #     password: Exstream1!
+        
+        # Provide tenant username/schema/password if applicable
+        # eep:
+        #   databaseInfo:
+        #     schema: eep_test
+        #     username: eep_test
+        #     password: Exstream1! 
+
+        # Provide tenant username/schema/password if applicable
+        rationalization:
+        #   databaseInfo:
+        #     schema: exi_test
+        #     username: exi_test
+        #     password: Exstream1!
+# Customer Specific BootStrap 
+
+  ## Specify a custom bootstrap configuration
+  #config: {}
+  # (Optional) Specify compute resources (CPU/memory)
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    bootstrapJob: {}
+      # requests:
+      #   cpu: "500m"
+      #   memory: "1Gi"
+      #   ephemeral-storage: "1Gi"
+      # limits:
+      #   cpu: "1000m"
+      #   memory: "2Gi"
+      #   ephemeral-storage: "2Gi"
+  # The vault role to use for this service (only applies if vault integration is enabled)
+  vaultRole:
+
+  storage:
+    tempVolume: {}
+    # sizeLimit: "5Gi"
