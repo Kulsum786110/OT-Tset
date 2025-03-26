@@ -1,0 +1,68 @@
+name: deploy-helm-chart_$(Date:yyyyMMdd)$(Rev:r)
+
+trigger: none
+
+variables:
+- group: Exstream_Dev_group 
+- name: helmChartVersion
+  value: '24.4.0'
+- name: helmChartFile
+  value: 'opentext-experience-cloud-$(helmChartVersion).tgz'
+- name: helmValuesFile
+  value: 'experience_values.yaml'
+- name: releaseName
+  value: 'experience-deployment'
+- name: namespace
+  value: 'dev-exstream'
+- name: kubernetesServiceConnection
+  value: 'ecm-dev-k8s-cluster'
+- name: SecretProviderClass
+  value: 'SecretProviderClass.yaml'
+
+
+stages:
+- stage: deploy_chart
+  displayName: 'Deploy Helm Chart'
+  jobs:
+    - job: deploy_helm_chart
+      displayName: 'Deploy Helm Chart'
+      pool:
+        name: 'AZ-NSN-INT-AGENTS'
+      steps:
+        - checkout: self
+          displayName: 'Checkout Repository'
+          
+        - task: Kubernetes@1
+          displayName: Install SecretProvierClass
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: 'ecm-dev-k8s-cluster'
+            namespace: 'dev-exstream'
+            command: 'apply'
+            useConfigurationFile: true
+            configuration: '$(Build.SourcesDirectory)/SecretProviderClass.yaml'
+            secretType: 'dockerRegistry'
+            containerRegistryType: 'Azure Container Registry'
+
+        - task: Bash@3
+          displayName: 'Lint Helm Chart'
+          inputs:
+            targetType: 'inline'
+            script: |
+              helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile) 
+
+        - task: HelmDeploy@0
+          displayName: 'Deploy Helm Chart to AKS'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'upgrade'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/$(helmChartFile)'
+            releaseName: '$(releaseName)'
+            valueFile: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+            setValues: |
+             otdsDBUser=$(DB_USERNAME)
+             otdsDBUserPassword=$(SRV-ECMOTDS-DEV)
+            # arguments: '--install --force --wait --timeout 10m0s --debug -f $(Build.SourcesDirectory)/$(helmValuesFile)'
