@@ -1,0 +1,9 @@
+variables:
+  helmChartVersion: '24.4.6+59452'
+  helmChartFile: 'exstream-$(helmChartVersion).tgz'
+  helmValuesFile: 'exstream_values_dev.yaml'
+  releaseName: 'exstream-deployment'
+  namespace: 'dev-exstream'
+  kubernetesServiceConnection: 'ecm-dev-k8s-cluster'
+  SecretProviderClass: 'SecretProviderClass.yaml'
+  agentPool: 'AZ-NSN-INT-AGENTS-DEV'
