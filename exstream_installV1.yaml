@@ -1,53 +1,41 @@
-name: deploy-helm-chart_$(Date:yyyyMMdd)$(Rev:r)
-
-trigger: none
-
-variables:
-- group: Exstream_Dev_group 
-- name: helmChartVersion
-  value: '24.4.6+59452'
-- name: helmChartFile
-  value: 'exstream-$(helmChartVersion).tgz'
-- name: helmValuesFile
-  value: 'exstream_values.yaml'
-- name: releaseName
-  value: 'exstream-deployment'
-- name: namespace
-  value: 'dev-exstream'
-- name: kubernetesServiceConnection
-  value: 'ecm-dev-k8s-cluster'
-- name: SecretProviderClass
-  value: 'SecretProviderClass.yaml'
-- name: extreamchartdependency
-  value: 'Chart.yaml'
+trigger:
+  branches:
+    include:
+      - dev
+      - release
 
 stages:
-- stage: deploy_chart
-  displayName: 'Deploy Helm Chart'
+# ---------------------------
+# Stage: Deploy Exstream - DEV
+# ---------------------------
+- stage: Deploy_Exstream_Dev
+  displayName: 'Deploy Exstream - DEV'
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/dev')
+  variables:
+    - template: vars/vars_dev.yaml
   jobs:
-    - job: deploy_helm_chart
-      displayName: 'Deploy Helm Chart'
+    - job: Exstream_Install_Dev
+      displayName: 'Install Exstream on DEV'
       pool:
-        name: 'AZ-NSN-INT-AGENTS'
+        name: $(agentPool)
       steps:
         - checkout: self
           displayName: 'Checkout Repository'
-          
+
         - task: Kubernetes@1
-          displayName: 'Install SecretProviderClass'
+          displayName: 'Apply SecretProviderClass'
           inputs:
             connectionType: 'Kubernetes Service Connection'
-            kubernetesServiceEndpoint: 'ecm-dev-k8s-cluster'
-            namespace: 'dev-exstream'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
             command: 'apply'
             useConfigurationFile: true
-            configuration: '$(Build.SourcesDirectory)/SecretProviderClass.yaml'
+            configuration: '$(Build.SourcesDirectory)/$(SecretProviderClass)'
             secretType: 'dockerRegistry'
             containerRegistryType: 'Azure Container Registry'
 
-        # Token replacement task
         - task: ReplaceTokens@5
-          displayName: 'Replace tokens in values.yaml'
+          displayName: 'Replace tokens in Exstream values file'
           inputs:
             targetFiles: '$(Build.SourcesDirectory)/$(helmValuesFile)'
             tokenPrefix: '#{'
@@ -61,7 +49,120 @@ stages:
               helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile)
 
         - task: HelmDeploy@0
-          displayName: 'Deploy Helm Chart to AKS'
+          displayName: 'Deploy Exstream Chart to AKS (DEV)'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'upgrade'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/$(helmChartFile)'
+            releaseName: '$(releaseName)'
+            valueFile: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+
+# ---------------------------
+# Stage: Deploy Exstream - E2E
+# ---------------------------
+- stage: Deploy_Exstream_E2E
+  displayName: 'Deploy Exstream - E2E'
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/release')
+  environment: E2E  # Ensure the E2E environment is configured with pre-deployment approvals
+  variables:
+    - template: vars/vars_e2e.yaml
+  jobs:
+    - job: Exstream_Install_E2E
+      displayName: 'Install Exstream on E2E'
+      pool:
+        name: $(agentPool)
+      steps:
+        - checkout: self
+          displayName: 'Checkout Repository'
+
+        - task: Kubernetes@1
+          displayName: 'Apply SecretProviderClass'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'apply'
+            useConfigurationFile: true
+            configuration: '$(Build.SourcesDirectory)/$(SecretProviderClass)'
+            secretType: 'dockerRegistry'
+            containerRegistryType: 'Azure Container Registry'
+
+        - task: ReplaceTokens@5
+          displayName: 'Replace tokens in Exstream values file'
+          inputs:
+            targetFiles: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+            tokenPrefix: '#{'
+            tokenSuffix: '}#'
+
+        - task: Bash@3
+          displayName: 'Lint Helm Chart'
+          inputs:
+            targetType: 'inline'
+            script: |
+              helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile)
+
+        - task: HelmDeploy@0
+          displayName: 'Deploy Exstream Chart to AKS (E2E)'
+          inputs:
+            connectionType: 'Kubernetes'
+            kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'upgrade'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/$(helmChartFile)'
+            releaseName: '$(releaseName)'
+            valueFile: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+
+# ---------------------------
+# Stage: Deploy Exstream - QA
+# ---------------------------
+- stage: Deploy_Exstream_QA
+  displayName: 'Deploy Exstream - QA'
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/release')
+  environment: QA  # Ensure the QA environment is configured with pre-deployment approvals
+  dependsOn: Deploy_Exstream_E2E
+  variables:
+    - template: vars/vars_qa.yaml
+  jobs:
+    - job: Exstream_Install_QA
+      displayName: 'Install Exstream on QA'
+      pool:
+        name: $(agentPool)
+      steps:
+        - checkout: self
+          displayName: 'Checkout Repository'
+
+        - task: Kubernetes@1
+          displayName: 'Apply SecretProviderClass'
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
+            namespace: '$(namespace)'
+            command: 'apply'
+            useConfigurationFile: true
+            configuration: '$(Build.SourcesDirectory)/$(SecretProviderClass)'
+            secretType: 'dockerRegistry'
+            containerRegistryType: 'Azure Container Registry'
+
+        - task: ReplaceTokens@5
+          displayName: 'Replace tokens in Exstream values file'
+          inputs:
+            targetFiles: '$(Build.SourcesDirectory)/$(helmValuesFile)'
+            tokenPrefix: '#{'
+            tokenSuffix: '}#'
+
+        - task: Bash@3
+          displayName: 'Lint Helm Chart'
+          inputs:
+            targetType: 'inline'
+            script: |
+              helm lint $(Build.SourcesDirectory)/$(helmChartFile) -f $(Build.SourcesDirectory)/$(helmValuesFile)
+
+        - task: HelmDeploy@0
+          displayName: 'Deploy Exstream Chart to AKS (QA)'
           inputs:
             connectionType: 'Kubernetes'
             kubernetesServiceConnection: '$(kubernetesServiceConnection)'
