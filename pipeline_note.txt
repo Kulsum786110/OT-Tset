@@ -1,0 +1,28 @@
+Key Points
+Branch Triggering & Conditions:
+
+The pipeline triggers on commits to dev and release branches.
+
+The DEV stage runs only if the source branch is refs/heads/dev.
+
+Both the E2E and QA stages run when the source branch is refs/heads/release. (QA depends on E2E.)
+
+Variable Templates:
+
+Each stage loads its environment‑specific variables from an external file (e.g., vars/vars_dev.yaml for DEV, etc.).
+
+These files define values such as helmChartFile, helmValuesFile, namespace, kubernetesServiceConnection, SecretProviderClass, and agentPool.
+
+Token Replacement for Secrets:
+
+The ReplaceTokens task scans your values file for tokens (for example, #{DB_PASSWORD}#) and replaces them with secret values from the variable group (linked to Azure Key Vault).
+
+Azure DevOps Environments:
+
+For non‑DEV stages, the stage is bound to an Azure DevOps environment (E2E and QA). Configure these environments in your DevOps project to enforce manual approvals if required.
+
+This YAML will work as follows:
+
+A commit to the dev branch automatically triggers the Deploy_Exstream_Dev stage, which picks up settings from vars/vars_dev.yaml and deploys to the DEV environment.
+
+A commit to the release branch triggers the E2E stage (and then the QA stage), picking the proper values files and secrets as defined in vars/vars_e2e.yaml and vars/vars_qa.yaml respectively.
